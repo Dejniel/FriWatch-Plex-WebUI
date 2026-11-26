@@ -25,6 +25,7 @@ Boolean options are enabled only when their value is the string `"true"`.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `PLEX_SERVER` | Required | Plex Media Server URL, including `http://` or `https://` and without a trailing slash. For example, `http://plex:32400` or `http://192.168.1.10:32400`. |
+| `PLEX_WEB_URL` | None | Browser-accessible Plex Web address, for example `http://192.168.1.10:32400/web`. Adds a link to the first-time setup help; it does not change the backend connection. |
 | `LISTEN_PORT` | `3000` | Internal TCP port on which FriWatch listens. The container-side port mapping and healthcheck use this value. |
 | `DATABASE_URL` | `file:./data/perplexed.db` | Local SQLite file. Relative paths resolve from the backend directory (`/app` in Docker); keep custom paths on persistent storage. |
 | `DISABLE_TLS_VERIFY` | `false` | Accept an untrusted HTTPS certificate presented by `PLEX_SERVER`. This affects the FriWatch-to-Plex connection, not FriWatch's own certificate. |
@@ -75,6 +76,17 @@ environment:
 ```
 
 Do not add a trailing slash to `PLEX_SERVER`.
+
+For an unclaimed server, sign in to FriWatch with the account that should own it.
+The setup screen requires a code printed once in the FriWatch container logs or
+backend console as `[Plex setup]`. The code stays valid until linking or a backend
+restart; it is never returned by the API. Keep the logs private. Linking uses
+Plex's native claim API and verifies the owner before continuing. An uncertain
+response offers a status check rather than repeating the write. If it remains
+unconfirmed, check Plex Web before restarting FriWatch for a fresh setup attempt.
+Plex requires the request to originate locally or on its subnet; configure
+`PLEX_SERVER` accordingly. Existing library and server settings become available
+after linking. Plex Web setup instructions are also available on the screen.
 
 Plex API and original-file requests require the user's Plex token. Generated
 transcode segments use their Plex session URL, which Plex validates. FriWatch preserves

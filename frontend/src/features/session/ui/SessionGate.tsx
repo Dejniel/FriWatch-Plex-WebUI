@@ -5,6 +5,7 @@ import { useSessionBootstrap } from "../model/useSessionBootstrap";
 import { PLEX_SESSION_INVALID_EVENT } from "../model/sessionEvents";
 import LoginScreen from "./LoginScreen";
 import ProfilePickerScreen from "./ProfilePickerScreen";
+import ServerSetupScreen from "./ServerSetupScreen";
 
 function LoadingScreen() {
   return (
@@ -58,7 +59,7 @@ function SessionFailure({
 }
 
 export default function SessionGate({ children }: { children: ReactNode }) {
-  const { status, error, initialize, signOut } = useAuthSession();
+  const { status, error, initialize, signOut, revision } = useAuthSession();
   const bootstrap = useSessionBootstrap();
 
   useEffect(() => {
@@ -86,6 +87,7 @@ export default function SessionGate({ children }: { children: ReactNode }) {
   if (status === "initializing" || (status === "ready" && bootstrap.pending))
     return <LoadingScreen />;
   if (status === "signedOut") return <LoginScreen />;
+  if (status === "serverSetup") return <ServerSetupScreen key={revision} />;
   if (status === "selectingProfile" || status === "unlocking")
     return <ProfilePickerScreen />;
 

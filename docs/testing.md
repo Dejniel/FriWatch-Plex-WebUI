@@ -34,12 +34,22 @@ mkdir -p "$PLEX_TEST_MEDIA_PATH"
 docker compose -f compose.test.yaml up --build -d
 ```
 
-Open Plex at `http://localhost:32401/web`, sign in, and complete server setup.
-Claim the server for your account; signing in to Plex Web alone is insufficient.
+Open FriWatch at `http://localhost:3101` and sign in. For an unclaimed server,
+copy its setup code from `docker compose -f compose.test.yaml logs friwatch`,
+check the target account and link it. Alternatively, complete setup in Plex Web
+at `http://localhost:32401/web`; signing in there alone does not claim the server.
 Optionally set `PLEX_TEST_CLAIM` from [plex.tv/claim](https://www.plex.tv/claim)
 before the first start. Add sample media to the directory and create libraries
 under `/data`. Include movies, episodes, versions, audio tracks, or subtitles
-needed by the scenario. Open FriWatch at `http://localhost:3101` and sign in.
+needed by the scenario.
+
+Test linking only on disposable Plex installations. Check incorrect setup codes,
+restricted accounts, a changed server/account, rejected claims and a lost write
+response. Pending results must offer read-only status checks, not repeat linking;
+the claimed flag alone must not report verified ownership. Confirm continuation
+uses ordinary Home/PIN selection. Setup must not add secrets to API responses
+or query/mutation cache; keep the installer code out of browser storage. Mock cloud claiming
+in automated tests; record separately whether a real account was linked.
 
 Check TV `Seasons` across shows and `Folders` in movie, TV and music libraries.
 Use nested folders with mixed files; verify breadcrumbs, Up, browser history,

@@ -43,6 +43,26 @@ const post = (url, body) => plexFetch(url + '/proxy', {
   body: JSON.stringify(body && { ...body, headers: body.headers ?? { 'X-Plex-Token': 'fixture' } }),
 });
 
+test('account linking cannot bypass installer proof through any proxy entry point', async t => {
+  let forwarded = 0;
+  const { url } = await setup(t, (_req, res) => { forwarded++; res.end('unexpected'); });
+  for (const path of ['/myplex/claim', '/myplex/account', '/%6dyplex/%63laim', '/myplex%2fclaim', '//myplex///claim']) {
+    assert.equal((await post(url, { url: path, method: 'POST' })).status, 403, `JSON ${path}`);
+    assert.equal((await plexFetch(url + '/proxy?' + new URLSearchParams({ url: path, method: 'POST' }))).status, 403, `flat ${path}`);
+    assert.equal((await rawRequest(url + '/dynproxy' + path, { method: 'POST' })).status, 403, `dynamic ${path}`);
+  }
+  assert.equal(forwarded, 0);
+});
+
+test('ownership checks preserve media paths containing a literal percent', async t => {
+  const paths = [];
+  const { url } = await setup(t, (req, res) => { paths.push(req.url); res.end('ok'); });
+  const path = '/library/parts/1/100%25%20Sample.mkv';
+  assert.equal((await post(url, { url: path, method: 'GET' })).status, 200);
+  assert.equal((await rawRequest(url + '/dynproxy' + path)).status, 200);
+  assert.deepEqual(paths, [path, path]);
+});
+
 function rawRequest(url, options = {}) {
   return new Promise((resolve, reject) => {
     const request = http.request(url, {

@@ -1,8 +1,11 @@
 import axios from "axios";
 import type { PerPlexed } from "../types.js";
 
-export async function CheckPlexUser(token: string): Promise<PerPlexed.PlexTV.User | null> {
+export async function CheckPlexUser(token: string, signal?: AbortSignal): Promise<PerPlexed.PlexTV.User | null> {
     const data = await axios.get("https://plex.tv/api/v2/user", {
+        timeout: 15_000,
+        maxRedirects: 0,
+        signal,
         headers: {
             "X-Plex-Token": token,
         },

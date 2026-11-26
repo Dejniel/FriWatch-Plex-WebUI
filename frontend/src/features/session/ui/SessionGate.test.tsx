@@ -20,6 +20,7 @@ vi.mock("../api/server", () => ({ getServerSessionContext: vi.fn() }));
 vi.mock("./ProfilePickerScreen", () => ({
   default: () => <div>Choose profile</div>,
 }));
+vi.mock("./ServerSetupScreen", () => ({ default: () => <div>Link your Plex server</div> }));
 
 function deferredSettings<T = Record<string, string>>() {
   let resolve!: (settings: T) => void;
@@ -167,6 +168,7 @@ it("allows cached settings after a failure and retries the failed load", async (
 it.each([
   ["signedOut", "Sign in"],
   ["selectingProfile", "Choose profile"],
+  ["serverSetup", "Link your Plex server"],
   ["error", "Authentication failed."],
 ] as const)("does not load profile settings while %s", async (status, text) => {
   ready();

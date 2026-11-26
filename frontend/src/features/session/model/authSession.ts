@@ -7,7 +7,7 @@ import {
   switchHomeProfile,
   validateServerToken,
 } from "../api/plexAuth";
-import { authErrorMessage } from "./authError";
+import { authErrorMessage, UnclaimedPlexServerError } from "./authError";
 import { AuthStorage, HomeProfile } from "./authStorage";
 import { useServerSession } from "./serverSession";
 import { homeProfiles } from "./plexHome";
@@ -19,6 +19,7 @@ type AuthStatus =
   | "selectingProfile"
   | "unlocking"
   | "ready"
+  | "serverSetup"
   | "error";
 
 interface AuthSessionState {
@@ -45,6 +46,19 @@ let operationGeneration = 0;
 function resetSessionData() {
   serverQueryClient.clear();
   useServerSession.getState().reset();
+}
+
+function enterServerSetup(ownerUser: Plex.UserData, revision: number) {
+  AuthStorage.clearActiveSession();
+  resetSessionData();
+  return {
+    status: "serverSetup" as const,
+    ownerUser,
+    activeProfile: null,
+    activeUser: null,
+    error: null,
+    revision: revision + 1,
+  };
 }
 
 function profileFromUser(
@@ -145,12 +159,17 @@ export const useAuthSession = create<AuthSessionState>((set, get) => ({
           return;
         }
       } catch (error) {
-        if (generation === operationGeneration)
+        if (generation === operationGeneration) {
+          if (error instanceof UnclaimedPlexServerError) {
+            set(enterServerSetup(ownerUser, get().revision));
+            return;
+          }
           set({
             status: "error",
             error: authErrorMessage(error, "server"),
             ownerUser,
           });
+        }
         return;
       }
       AuthStorage.clearActiveSession();
@@ -229,11 +248,17 @@ export const useAuthSession = create<AuthSessionState>((set, get) => ({
       }));
       return true;
     } catch (error) {
-      if (generation === operationGeneration)
+      if (generation === operationGeneration) {
+        const ownerUser = get().ownerUser;
+        if (error instanceof UnclaimedPlexServerError && ownerUser) {
+          set(enterServerSetup(ownerUser, get().revision));
+          return false;
+        }
         set({
           status: "selectingProfile",
           error: authErrorMessage(error, "server"),
         });
+      }
       return false;
     }
   },

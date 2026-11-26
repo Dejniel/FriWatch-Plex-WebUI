@@ -201,3 +201,4 @@ export interface LibraryPageDto {
 export function normalizeLibraryRecord<
   T extends { type?: string; key?: string },
 >(item: T, directory?: boolean, requestedType?: LibraryItemType): T;
+export { readPlexServerSetup, type PlexServerSetup } from "./serverSetup.js";

@@ -43,6 +43,7 @@ FriWatch originated as a fork of [Ipmake/NevuForPlex](https://github.com/Ipmake/
 
 ### Administration and hosting
 
+- **First-time server linking** to your signed-in Plex account, protected by a setup code from the FriWatch logs, with ownership verification and Plex Web instructions when needed.
 - **Plex Home management** with managed-user names and age restrictions, PINs, household invitations, guest access, member removal, and library permissions, governed by the active profile's Plex permissions.
 - **Metadata and artwork administration** through one editor for video, music and photos: type-specific fields, existing-tag suggestions, field locks, supported movie/show editions, and poster/cover/background/logo/square-art/banner editing. Includes uploads, URL imports, music artist/album reassignment, native merge handling, and per-item Plex preferences. Saves preserve unedited values and retain drafts after partial failures.
 - **Plex metadata matching** for movies, shows, artists and albums: title or external-ID searches, server-provided agents, source file/folder paths, and manager-only Match, Fix Match and Unmatch actions. Supports IMDb/TMDB/TVDB IDs and links, plus MusicBrainz artist/release IDs.
@@ -82,7 +83,6 @@ services:
     ports:
       - "32400:32400"
     environment:
-      PLEX_CLAIM: claim-REPLACE_ME
       ADVERTISE_IP: http://192.168.1.10:32400/
     volumes:
       - /srv/plex/config:/config
@@ -97,6 +97,7 @@ services:
       - "3000:3000"
     environment:
       PLEX_SERVER: http://plex:32400
+      PLEX_WEB_URL: http://192.168.1.10:32400/web
     volumes:
       - friwatch-data:/app/data
 
@@ -104,13 +105,15 @@ volumes:
   friwatch-data:
 ```
 
-Replace the server IP, storage paths, and `PLEX_CLAIM` from [plex.tv/claim](https://www.plex.tv/claim), then deploy:
+Replace the server IP and storage paths, then deploy:
 
 ```bash
 docker compose up -d
 ```
 
-Open Plex at `http://192.168.1.10:32400/web` and FriWatch at `http://192.168.1.10:3000`. The claim token is only needed for Plex's first start.
+Open FriWatch at `http://192.168.1.10:3000` and sign in. For an unlinked Plex server,
+FriWatch shows the target account and asks for the setup code from its container logs.
+You can also link the server through Plex Web at `http://192.168.1.10:32400/web`.
 
 Timezone, custom Plex user/group IDs, a dedicated `/transcode` mount, hardware acceleration, and additional Plex discovery ports are optional and depend on the host. Add them only when your installation requires them.
 

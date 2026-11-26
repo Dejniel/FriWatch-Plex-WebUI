@@ -83,6 +83,21 @@ export function createPlexProxyRouter({
         streaming: boolean,
     ) {
         const target = new URL(config.url);
+        // Ownership writes require installer proof and belong to the setup router.
+        // Decode path segments before checking so encoded URLs cannot bypass it.
+        let path = target.pathname;
+        for (let i = 0; i < 4; i++) {
+            try {
+                const decoded = decodeURIComponent(path);
+                if (decoded === path) break;
+                path = decoded;
+            } catch { break; } // A literal percent in an ordinary media filename is not an ownership route.
+        }
+        path = new URL(path.replaceAll('\\', '/').replace(/\/+/g, '/'), 'http://plex').pathname;
+        if (/^\/myplex(?:\/|$)/i.test(path)) {
+            res.status(403).send('Use server setup to manage Plex account linking');
+            return;
+        }
         const token = Object.entries(config.headers ?? {})
             .find(([name]) => name.toLowerCase() === 'x-plex-token')?.[1]
             ?? target.searchParams.get('X-Plex-Token');

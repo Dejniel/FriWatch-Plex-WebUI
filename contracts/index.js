@@ -84,3 +84,4 @@ export {
   preferenceChanges,
   validatePreferenceChanges,
 } from "./preferences.js";
+export { readPlexServerSetup } from "./serverSetup.js";

@@ -48,7 +48,13 @@ validated server identity before mounting application screens. Initial failures
 show recovery actions; failed background refreshes retain the current context
 with a warning. Settings fall back to cached/default values after a failed load.
 Cached server credentials are checked against protected server details, rather
-than public `/identity`; unclaimed servers receive an explicit setup message.
+than public `/identity`; unclaimed servers enter a dedicated linking screen.
+Setup captures the main login account before a server session exists. Its backend
+owns a server-bound installer code available only in logs, a single native claim
+submission, and read-only ownership verification. Uncertain submissions cannot be
+automatically repeated. Generic proxy routes exclude `/myplex` so they cannot bypass
+installer proof. After verification, normal Home selection and server bootstrap
+resume; setup does not duplicate library or preference administration.
 
 Entities expose their supported UI through `public.ts` and may additionally
 expose a headless `model.ts` entry point. API and model code should use the

@@ -19,6 +19,7 @@ import { parsePlexServerUrl } from './plexServerUrl.js';
 import { createPlexProxyRouter } from './plexProxy.js';
 import { createUserOptionsRouter } from './userOptions.js';
 import { httpErrorHandler } from './httpErrors.js';
+import { createPlexServerSetupRouter } from './plexServerSetup.js';
 
 /*
  * ENVIRONMENT VARIABLES
@@ -163,6 +164,14 @@ app.use(createPlexProxyRouter({
     imageHttpsAgent: plexImageHttpsAgent,
 }));
 app.use(express.json());
+
+app.use('/server-setup', createPlexServerSetupRouter({
+    plexServer: plexServerUrl.origin,
+    httpAgent: plexHttpAgent,
+    httpsAgent: plexHttpsAgent,
+    webUrl: process.env.PLEX_WEB_URL,
+    onSetupCode: (serverId, code) => console.log(`[Plex setup] Server ${serverId} — setup code: ${code}`),
+}));
 
 app.get('/status', (_req, res) => {
     res.send(status);

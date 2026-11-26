@@ -26,6 +26,7 @@ services:
       - "127.0.0.1:${FRIWATCH_TEST_PORT:-3101}:3000"
     environment:
       PLEX_SERVER: http://plex:32400
+      PLEX_WEB_URL: http://${PLEX_TEST_HOST:-localhost}:${PLEX_TEST_PORT:-32401}/web
       LISTEN_PORT: 3000
     volumes:
       - nevu-data:/app/data

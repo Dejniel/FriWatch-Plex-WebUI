@@ -4,7 +4,7 @@ import { PlexResponseError } from "shared/api/plexResponse";
 
 export class UnclaimedPlexServerError extends Error {
   constructor() {
-    super("This Plex server has not been claimed. Complete server setup in Plex Web, then retry.");
+    super("This Plex server has not been claimed. Link it to your Plex account to continue.");
     this.name = "UnclaimedPlexServerError";
   }
 }

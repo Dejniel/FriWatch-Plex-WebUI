@@ -8,6 +8,7 @@ import {
 } from "../api/plexAuth";
 import { AuthStorage, HomeProfile } from "./authStorage";
 import { useAuthSession } from "./authSession";
+import { UnclaimedPlexServerError } from "./authError";
 
 vi.mock("../api/plexAuth", () => ({
   getHomeProfiles: vi.fn(),
@@ -56,6 +57,28 @@ beforeEach(() => {
 });
 
 describe("auth session", () => {
+  it("opens protected setup with the main account when a restored profile finds an unclaimed server", async () => {
+    AuthStorage.setOwnerToken("owner-token");
+    AuthStorage.saveActiveSession({ profile, accountToken: "profile-token", serverToken: "old-server-token" });
+    vi.mocked(getPlexUser).mockResolvedValueOnce(owner).mockResolvedValueOnce(member);
+    vi.mocked(validateServerToken).mockResolvedValue(false);
+    vi.mocked(resolveServerToken).mockRejectedValue(new UnclaimedPlexServerError());
+    await useAuthSession.getState().initialize();
+    expect(useAuthSession.getState()).toMatchObject({ status: "serverSetup", ownerUser: owner, activeUser: null, activeProfile: null, revision: 1 });
+    expect(AuthStorage.getOwnerToken()).toBe("owner-token");
+    expect(AuthStorage.getActiveSession()).toBeNull();
+  });
+
+  it("routes an unclaimed server from Home selection to setup without claiming as the selected child", async () => {
+    AuthStorage.setOwnerToken("owner-token");
+    useAuthSession.setState({ ownerUser: owner });
+    vi.mocked(switchHomeProfile).mockResolvedValue("profile-token");
+    vi.mocked(resolveServerToken).mockRejectedValue(new UnclaimedPlexServerError());
+    vi.mocked(getPlexUser).mockResolvedValue(member);
+    await expect(useAuthSession.getState().selectProfile(profile, "1234")).resolves.toBe(false);
+    expect(useAuthSession.getState()).toMatchObject({ status: "serverSetup", ownerUser: owner, activeUser: null });
+    expect(AuthStorage.getActiveSession()).toBeNull();
+  });
   it("shows the profile picker after validating the owner", async () => {
     AuthStorage.setOwnerToken("owner-token");
     (getPlexUser as Mock).mockResolvedValue(owner);
