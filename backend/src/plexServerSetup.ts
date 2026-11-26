@@ -16,6 +16,10 @@ interface Options {
   onSetupCode: (serverId: string, code: string) => void;
 }
 
+type SetupAttempt =
+  | { phase: "unclaimed"; serverId: string; code: string }
+  | { phase: "pending"; serverId: string };
+
 class SetupError extends Error {
   constructor(
     readonly status: number,
@@ -63,9 +67,9 @@ export function createPlexServerSetupRouter(options: Options) {
   const router = express.Router();
   const serverUrl = new URL(options.plexServer).origin;
   const webUrl = browserWebUrl(options.webUrl);
-  let challenge: { serverId: string; code: string } | undefined;
-  // No credentials are retained. An uncertain write can only be verified, never automatically repeated.
-  let submittedServerId: string | undefined;
+  // A pending attempt retains only its target, never credentials or a reusable code.
+  let attempt: SetupAttempt | undefined;
+  // Serialize request execution, including cloud authorization before submission.
   let busy = false;
 
   const nativeConfig = (signal: AbortSignal, token?: string) => ({
@@ -102,22 +106,38 @@ export function createPlexServerSetupRouter(options: Options) {
         "invalid_identity",
         "Plex returned incomplete server information.",
       );
-    const result = {
+    return {
       serverId: container.machineIdentifier,
       claimed: knownClaimed,
     };
-    if (challenge && (result.claimed || challenge.serverId !== result.serverId))
-      challenge = undefined;
-    if (submittedServerId && submittedServerId !== result.serverId)
-      submittedServerId = undefined;
-    if (!result.claimed && !submittedServerId && !challenge) {
-      challenge = {
-        serverId: result.serverId,
+  }
+
+  function observe(current: { serverId: string; claimed: boolean }) {
+    // A concurrent read cannot replace the attempt owned by the active claim request.
+    if (busy) return;
+    if (
+      attempt &&
+      (attempt.serverId !== current.serverId ||
+        (attempt.phase === "unclaimed" && current.claimed))
+    )
+      attempt = undefined;
+    if (!current.claimed && !attempt) {
+      attempt = {
+        phase: "unclaimed",
+        serverId: current.serverId,
         code: randomBytes(18).toString("base64url"),
       };
-      options.onSetupCode(challenge.serverId, challenge.code);
+      options.onSetupCode(attempt.serverId, attempt.code);
     }
-    return result;
+  }
+
+  function assertServer(current: { serverId: string }, expectedId: unknown) {
+    if (current.serverId !== expectedId)
+      throw new SetupError(
+        409,
+        "server_changed",
+        "The configured server changed. Reload this page.",
+      );
   }
 
   function info(
@@ -172,14 +192,17 @@ export function createPlexServerSetupRouter(options: Options) {
   }
 
   async function verify(
-    current: { serverId: string; claimed: boolean },
+    serverId: string,
     owner: { user: PerPlexed.PlexTV.User; token: string; accountId: string },
     signal: AbortSignal,
   ): Promise<PlexServerSetup> {
+    const current = await identity(signal);
+    assertServer(current, serverId);
+    observe(current);
     if (!current.claimed)
       return info(
-        current.serverId,
-        submittedServerId ? "pending" : "unclaimed",
+        serverId,
+        attempt?.phase === "pending" ? "pending" : "unclaimed",
       );
     // Claim acknowledgement alone does not prove which account owns the server.
     try {
@@ -193,19 +216,24 @@ export function createPlexServerSetupRouter(options: Options) {
           ? plexAccount.username.trim().toLowerCase()
           : "";
       if (username && plexAccount.signInState === "ok") {
+        // Bind both sides of the ownership read to the original target.
+        const confirmed = await identity(signal);
+        assertServer(confirmed, serverId);
+        if (!confirmed.claimed) return info(serverId, "pending");
+        if (attempt?.serverId === serverId) attempt = undefined;
         if (!accountNames(owner.user).includes(username))
           throw new SetupError(
             409,
             "different_owner",
             "This server is linked to another Plex account. Sign in with its owner.",
           );
-        return info(current.serverId, "verified", owner.accountId);
+        return info(serverId, "verified", owner.accountId);
       }
     } catch (error) {
       if (error instanceof SetupError) throw error;
       // PMS may report claimed before its account/token information becomes available.
     }
-    return info(current.serverId, "pending");
+    return info(serverId, "pending");
   }
 
   function route(
@@ -228,7 +256,7 @@ export function createPlexServerSetupRouter(options: Options) {
           error: known
             ? error.message
             : "FriWatch could not complete server setup. Check the connection and try again.",
-          ...(submittedServerId && { mayHaveSubmitted: true }),
+          ...(attempt?.phase === "pending" && { mayHaveSubmitted: true }),
         });
       } finally {
         scope.dispose();
@@ -240,12 +268,13 @@ export function createPlexServerSetupRouter(options: Options) {
     "/",
     route(async (_req, res, signal) => {
       const current = await identity(signal);
+      observe(current);
       res.json(
         info(
           current.serverId,
           current.claimed
             ? "claimed"
-            : submittedServerId
+            : attempt?.phase === "pending"
               ? "pending"
               : "unclaimed",
         ),
@@ -257,14 +286,21 @@ export function createPlexServerSetupRouter(options: Options) {
     "/claim",
     route(async (req, res, signal) => {
       const { setupCode, serverId, accountId } = object(req.body);
+      if (attempt?.phase === "pending")
+        throw new SetupError(
+          409,
+          "setup_pending",
+          "A linking request is already in progress. Check its status.",
+        );
+      const available = attempt;
       const proof =
         typeof setupCode === "string"
           ? Buffer.from(setupCode)
           : Buffer.alloc(0);
-      const expected = Buffer.from(challenge?.code ?? "");
+      const expected = Buffer.from(available?.code ?? "");
       if (
-        !challenge ||
-        challenge.serverId !== serverId ||
+        !available ||
+        available.serverId !== serverId ||
         !expected.length ||
         proof.length !== expected.length ||
         !timingSafeEqual(proof, expected)
@@ -274,7 +310,7 @@ export function createPlexServerSetupRouter(options: Options) {
           "setup_code_required",
           "Enter the setup code from the FriWatch logs.",
         );
-      if (busy || submittedServerId)
+      if (busy)
         throw new SetupError(
           409,
           "setup_pending",
@@ -283,7 +319,8 @@ export function createPlexServerSetupRouter(options: Options) {
       busy = true;
       try {
         let current = await identity(signal);
-        if (current.serverId !== serverId || current.claimed)
+        assertServer(current, serverId);
+        if (current.claimed)
           throw new SetupError(
             409,
             "server_changed",
@@ -313,14 +350,15 @@ export function createPlexServerSetupRouter(options: Options) {
             "Plex did not authorize server linking. Try again.",
           );
         current = await identity(signal);
-        if (current.serverId !== serverId || current.claimed)
+        assertServer(current, serverId);
+        if (current.claimed)
           throw new SetupError(
             409,
             "server_changed",
             "The server changed or is already linked. Check its status.",
           );
         signal.throwIfAborted();
-        submittedServerId = current.serverId;
+        attempt = { phase: "pending", serverId: current.serverId };
         try {
           await axios.post(`${serverUrl}/myplex/claim`, undefined, {
             ...nativeConfig(signal),
@@ -334,7 +372,11 @@ export function createPlexServerSetupRouter(options: Options) {
             error.response.status >= 400 &&
             error.response.status < 500
           ) {
-            submittedServerId = undefined;
+            if (
+              attempt?.phase === "pending" &&
+              attempt.serverId === available.serverId
+            )
+              attempt = available;
             throw new SetupError(
               409,
               "claim_rejected",
@@ -342,11 +384,10 @@ export function createPlexServerSetupRouter(options: Options) {
             );
           }
         }
-        challenge = undefined;
         let result = info(current.serverId, "pending");
         if (!signal.aborted) {
           try {
-            result = await verify(await identity(signal), owner, signal);
+            result = await verify(available.serverId, owner, signal);
           } catch (error) {
             if (error instanceof SetupError) throw error;
           }
@@ -362,14 +403,13 @@ export function createPlexServerSetupRouter(options: Options) {
     "/verification",
     route(async (req, res, signal) => {
       const owner = await account(req, req.query.accountId, signal);
-      const current = await identity(signal);
-      if (current.serverId !== req.query.serverId)
+      if (typeof req.query.serverId !== "string" || !req.query.serverId.trim())
         throw new SetupError(
-          409,
-          "server_changed",
-          "The configured server changed. Reload this page.",
+          400,
+          "server_required",
+          "Select the configured Plex server.",
         );
-      const result = await verify(current, owner, signal);
+      const result = await verify(req.query.serverId, owner, signal);
       res.status(result.state === "pending" ? 202 : 200).json(result);
     }),
   );

@@ -126,7 +126,9 @@ export default function MediaListsView({
         : {
             itemWidth: mediaCardWidth(cardView.layout, cardView.size),
             imageAspectRatio: mediaCardAspectRatio(cardView.layout),
-            footerHeight: MEDIA_CARD_FOOTER_HEIGHT + (id && kind === "playlist" ? 24 : 0),
+            footerHeight: id && kind === "playlist"
+              ? `calc(${MEDIA_CARD_FOOTER_HEIGHT} + 1.5rem)`
+              : MEDIA_CARD_FOOTER_HEIGHT,
           }),
     observeRef: toolbarRef,
     resetKey: list.key,

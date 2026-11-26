@@ -35,7 +35,12 @@ export function createServerSetupClient(
       throw new DOMException("The Plex account changed.", "AbortError");
   };
 
-  async function request(path: string, signal: AbortSignal, body?: object) {
+  async function request(
+    path: string,
+    signal: AbortSignal,
+    serverId?: string,
+    body?: object,
+  ) {
     assertCurrent();
     let response;
     try {
@@ -73,10 +78,16 @@ export function createServerSetupClient(
     }
     try {
       const result = readPlexServerSetup(response.data);
+      if (serverId !== undefined && result.serverId !== serverId)
+        throw new ServerSetupError(
+          "The configured server changed. Reload this page.",
+          Boolean(body),
+        );
       if (result.state === "verified" && result.accountId !== accountId)
         throw new Error("Account mismatch");
       return result;
-    } catch {
+    } catch (error) {
+      if (error instanceof ServerSetupError) throw error;
       throw new ServerSetupError(
         "Plex returned incomplete setup information. Check the server status.",
         Boolean(body),
@@ -89,11 +100,12 @@ export function createServerSetupClient(
     isCurrent,
     info: (signal: AbortSignal) => request("", signal),
     claim: (serverId: string, setupCode: string, signal: AbortSignal) =>
-      request("/claim", signal, { serverId, accountId, setupCode }),
+      request("/claim", signal, serverId, { serverId, accountId, setupCode }),
     verify: (serverId: string, signal: AbortSignal) =>
       request(
         `/verification?${new URLSearchParams({ serverId, accountId })}`,
         signal,
+        serverId,
       ),
     continue: async () => {
       assertCurrent();

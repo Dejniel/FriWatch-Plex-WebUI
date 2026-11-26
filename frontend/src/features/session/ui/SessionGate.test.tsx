@@ -232,6 +232,21 @@ it("keeps the current screen mounted when a background server refresh fails", as
   expect(host.querySelector('[role="alert"]')?.textContent).toContain("cannot reach");
 });
 
+it("keeps content mounted while retrying unavailable administrative capabilities", async () => {
+  vi.mocked(loadUserSettings).mockResolvedValue({});
+  vi.mocked(getServerSessionContext).mockResolvedValueOnce({
+    server: { machineIdentifier: "server" } as Plex.ServerPreferences, providers: null, capabilitiesUnavailable: true,
+  });
+  ready(); await render();
+  const content = host.querySelector("main");
+  expect(content).not.toBeNull();
+  expect(useServerSession.getState().canManageServer).toBe(false);
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain("permissions could not be checked");
+  await act(async () => host.querySelector<HTMLButtonElement>("button")!.click());
+  expect(host.querySelector("main")).toBe(content);
+  expect(host.querySelector('[role="alert"]')).toBeNull();
+});
+
 it("aborts the old profile's server bootstrap and waits for the current profile", async () => {
   const first = deferredSettings<Awaited<ReturnType<typeof getServerSessionContext>>>();
   const second = deferredSettings<Awaited<ReturnType<typeof getServerSessionContext>>>();

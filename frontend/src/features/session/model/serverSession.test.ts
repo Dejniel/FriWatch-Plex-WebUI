@@ -87,6 +87,20 @@ it("retains an initialized context when a later refresh fails", async () => {
   expect(useServerSession.getState()).toMatchObject({ status: "ready", server, canManageServer: true, error: { recovery: "server" } });
 });
 
+it("allows browsing with a retryable warning when only capabilities are unavailable", async () => {
+  AuthStorage.saveActiveSession({ profile: null, accountToken: "account", serverToken: "server" });
+  const server = { machineIdentifier: "server" } as Plex.ServerPreferences;
+  vi.mocked(getServerSessionContext).mockResolvedValueOnce({ server, providers: null, capabilitiesUnavailable: true });
+  await useServerSession.getState().refresh();
+  expect(useServerSession.getState()).toMatchObject({ status: "ready", server, canManageServer: false,
+    error: { message: expect.stringContaining("permissions could not be checked"), recovery: "server" } });
+  vi.mocked(getServerSessionContext).mockResolvedValueOnce({ server, providers: { Feature: [{ type: "manage" }] } });
+  const retry = useServerSession.getState().refresh();
+  expect(useServerSession.getState()).toMatchObject({ status: "ready", server });
+  await retry;
+  expect(useServerSession.getState()).toMatchObject({ status: "ready", canManageServer: true, error: null });
+});
+
 it("turns a stalled bootstrap into an error and aborts its requests after the deadline", async () => {
   vi.useFakeTimers();
   try {

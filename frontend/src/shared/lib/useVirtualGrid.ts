@@ -17,7 +17,7 @@ export type VirtualGridGeometry = {
       layout?: "grid";
       itemWidth: number;
       imageAspectRatio: number;
-      footerHeight?: number;
+      footerHeight?: number | string;
     }
 );
 
@@ -39,15 +39,41 @@ export function useVirtualGrid(options: VirtualGridOptions) {
     scrollElementRef,
   } = options;
   const [gridElement, setGridElement] = useState<HTMLDivElement | null>(null);
-  const [geometry, setGeometry] = useState({ width: 0, top: 0 });
+  const [geometry, setGeometry] = useState({
+    width: 0,
+    top: 0,
+    footerHeight: 0,
+  });
   const [activeKey, setActiveKey] = useState<string | null | undefined>(
     resetKey,
   );
   const positioned = !resetKey || activeKey === resetKey;
+  const footerHeight =
+    options.layout === "list" ? 0 : (options.footerHeight ?? 68);
 
   useLayoutEffect(() => {
     const grid = gridElement;
     if (!grid) return;
+    // One non-layout probe per viewport keeps CSS units (including rem and calc)
+    // in the existing geometry observer, without measuring every media card.
+    const footer =
+      typeof footerHeight === "string" ? document.createElement("span") : null;
+    if (footer) {
+      footer.setAttribute("aria-hidden", "true");
+      Object.assign(footer.style, {
+        position: "fixed",
+        top: "0",
+        left: "0",
+        width: "0",
+        height: footerHeight,
+        visibility: "hidden",
+        pointerEvents: "none",
+        overflow: "hidden",
+        padding: "0",
+        border: "0",
+      });
+      document.body.append(footer);
+    }
     let frame = 0;
     const update = () => {
       const bounds = grid.getBoundingClientRect();
@@ -57,9 +83,12 @@ export function useVirtualGrid(options: VirtualGridOptions) {
         top: scroll
           ? bounds.top - scroll.getBoundingClientRect().top + scroll.scrollTop
           : bounds.top + window.scrollY,
+        footerHeight: footer?.getBoundingClientRect().height ?? 0,
       };
       setGeometry((current) =>
-        current.width === next.width && current.top === next.top
+        current.width === next.width &&
+        current.top === next.top &&
+        current.footerHeight === next.footerHeight
           ? current
           : next,
       );
@@ -71,15 +100,17 @@ export function useVirtualGrid(options: VirtualGridOptions) {
     update();
     const observer = new ResizeObserver(schedule);
     observer.observe(grid);
+    if (footer) observer.observe(footer);
     if (observeRef?.current) observer.observe(observeRef.current);
     if (scrollElementRef?.current) observer.observe(scrollElementRef.current);
     window.addEventListener("resize", schedule);
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
+      footer?.remove();
       window.removeEventListener("resize", schedule);
     };
-  }, [gridElement, observeRef, scrollElementRef]);
+  }, [gridElement, observeRef, scrollElementRef, footerHeight]);
 
   const list = options.layout === "list";
   const itemWidth = list ? geometry.width : options.itemWidth;
@@ -102,8 +133,10 @@ export function useVirtualGrid(options: VirtualGridOptions) {
   const rowHeight = Math.ceil(
     (list
       ? options.itemHeight
-      : cardWidth / options.imageAspectRatio + (options.footerHeight ?? 68)) +
-      VIRTUAL_GRID_GAP,
+      : cardWidth / options.imageAspectRatio +
+        (typeof footerHeight === "number"
+          ? footerHeight
+          : geometry.footerHeight)) + VIRTUAL_GRID_GAP,
   );
   const displayCount = count ?? Math.max(minimumCount, columns * 6);
   const rowCount = Math.ceil(displayCount / columns);

@@ -104,3 +104,28 @@ it("continues through ordinary account initialization rather than bypassing Home
   await createServerSetupClient().continue();
   expect(login).toHaveBeenCalledWith("main-account");
 });
+
+it.each(["claim", "verify"] as const)(
+  "rejects a %s response for a replacement server",
+  async (kind) => {
+    vi.mocked(axios.request).mockResolvedValueOnce({
+      status: 200,
+      data: {
+        ...response,
+        serverId: "replacement",
+        state: "verified",
+        accountId: "7",
+      },
+    });
+    const client = createServerSetupClient();
+    const signal = new AbortController().signal;
+    const result =
+      kind === "claim"
+        ? client.claim("server", "proof", signal)
+        : client.verify("server", signal);
+    await expect(result).rejects.toMatchObject({
+      message: "The configured server changed. Reload this page.",
+      mayHaveSubmitted: kind === "claim",
+    });
+  },
+);

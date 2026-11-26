@@ -47,6 +47,8 @@ and server context. Its bootstrap cancels obsolete server reads and waits for a
 validated server identity before mounting application screens. Initial failures
 show recovery actions; failed background refreshes retain the current context
 with a warning. Settings fall back to cached/default values after a failed load.
+Optional server capabilities have their own deadline; failed reads disable
+administration and offer a retry while browsing remains available.
 Cached server credentials are checked against protected server details, rather
 than public `/identity`; unclaimed servers enter a dedicated linking screen.
 Setup captures the main login account before a server session exists. Its backend
@@ -55,6 +57,9 @@ submission, and read-only ownership verification. Uncertain submissions cannot b
 automatically repeated. Generic proxy routes exclude `/myplex` so they cannot bypass
 installer proof. After verification, normal Home selection and server bootstrap
 resume; setup does not duplicate library or preference administration.
+Ownership verification checks the original server identity around the account
+read and finishes the pending attempt. Explicitly unclaiming that server permits
+a new attempt with a fresh installer code.
 
 Entities expose their supported UI through `public.ts` and may additionally
 expose a headless `model.ts` entry point. API and model code should use the
@@ -139,6 +144,8 @@ Width limits use `rem` so browser text preferences also scale dialogs and readin
 columns. Media-card sizes share one persisted range across libraries and Home;
 card typography responds to its inline-size container. Virtual catalogs share the
 caption-space budget, with playlist positions reserving their additional line.
+That budget shares the card typography model and resolves CSS units through the
+viewport's existing observer, so text resizing also updates virtual row heights.
 Title headers wrap columns according to available space and text size.
 
 `features/media-actions` owns the shared rating control, rating writes and personal

@@ -32,6 +32,7 @@ async function setup(t, claimHandler) {
     cloudReads: [],
     codes: [],
     afterClaimToken: undefined,
+    afterAccountRead: undefined,
   };
   const upstream = await listen(t, async (req, res) => {
     const url = new URL(req.url, "http://plex");
@@ -47,11 +48,11 @@ async function setup(t, claimHandler) {
       );
     if (url.pathname === "/myplex/account") {
       assert.equal(req.headers["x-plex-token"], "account-fixture");
-      return res.end(
-        JSON.stringify({
-          MyPlex: { username: state.username, signInState: "ok" },
-        }),
-      );
+      const body = JSON.stringify({
+        MyPlex: { username: state.username, signInState: "ok" },
+      });
+      state.afterAccountRead?.();
+      return res.end(body);
     }
     if (url.pathname === "/myplex/claim") {
       state.claims++;
@@ -291,4 +292,63 @@ test("rejects malformed verified contracts and unsafe fallback URLs", () => {
       webUrl: "http://user:secret@plex/web",
     }),
   );
+});
+
+for (const completion of ["claim response", "later verification"]) {
+  test(`finishes the attempt after ${completion} and can link an explicitly unclaimed server again`, async (t) => {
+    const { state, claim, verify, url } = await setup(
+      t,
+      completion === "later verification"
+        ? (req) => req.socket.destroy()
+        : undefined,
+    );
+    const oldCode = state.codes[0].code;
+    const first = await claim();
+    if (completion === "later verification") {
+      assert.equal(first.status, 202);
+      state.claimed = true;
+      assert.equal((await (await verify()).json()).state, "verified");
+    } else assert.equal((await first.json()).state, "verified");
+    state.claimed = false;
+    const info = await (await fetch(url)).json();
+    assert.equal(info.state, "unclaimed");
+    assert.equal(state.codes.length, 2);
+    assert.notEqual(state.codes[1].code, oldCode);
+    assert.equal((await claim({ setupCode: oldCode })).status, 403);
+    assert.equal(state.claims, 1);
+    // A new explicit submission uses the fresh installer code, never the consumed one.
+    const second = await claim();
+    assert.equal(
+      second.status,
+      completion === "later verification" ? 202 : 200,
+    );
+    assert.equal(state.claims, 2);
+  });
+}
+
+test("rejects a replacement server after claim submission without verifying its owner", async (t) => {
+  const { state, claim } = await setup(t, (_req, res, current) => {
+    current.serverId = "replacement";
+    current.claimed = true;
+    res.end("{}");
+  });
+  const response = await claim();
+  assert.equal(response.status, 409);
+  const result = await response.json();
+  assert.equal(result.code, "server_changed");
+  assert.equal(result.mayHaveSubmitted, true);
+  assert.equal(result.accountId, undefined);
+  assert.equal(state.claims, 1);
+});
+
+test("rejects a server change during the ownership read", async (t) => {
+  const { state, verify } = await setup(t);
+  state.claimed = true;
+  state.afterAccountRead = () => {
+    state.serverId = "replacement";
+  };
+  const response = await verify();
+  assert.equal(response.status, 409);
+  assert.equal((await response.json()).code, "server_changed");
+  assert.equal(state.claims, 0);
 });

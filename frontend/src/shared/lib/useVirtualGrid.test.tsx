@@ -5,7 +5,8 @@ import { useVirtualGrid, type VirtualGridGeometry } from "./useVirtualGrid";
 let root: Root,
   state: ReturnType<typeof useVirtualGrid>,
   width: number,
-  top: number;
+  top: number,
+  footerHeight: number;
 const observers: TestResizeObserver[] = [];
 class TestResizeObserver {
   observed: Element[] = [];
@@ -35,20 +36,23 @@ beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal("ResizeObserver", TestResizeObserver);
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
-    () => ({
-      width,
-      height: 800,
-      top,
-      left: 0,
-      right: width,
-      bottom: top + 800,
-      x: 0,
-      y: top,
-      toJSON: () => ({}),
-    }),
+    function (this: HTMLElement) {
+      return {
+        width,
+        height: this.tagName === "SPAN" ? footerHeight : 800,
+        top,
+        left: 0,
+        right: width,
+        bottom: top + 800,
+        x: 0,
+        y: top,
+        toJSON: () => ({}),
+      };
+    },
   );
   width = 760;
   top = 160;
+  footerHeight = 80;
   observers.length = 0;
   root = createRoot(document.createElement("div"));
 });
@@ -92,4 +96,42 @@ it("keeps card geometry and updates the scroll margin when the toolbar changes h
     await new Promise((resolve) => requestAnimationFrame(resolve));
   });
   expect(state.top).toBe(240);
+});
+
+it("resolves CSS footer geometry and remeasures when text grows without a viewport resize", async () => {
+  await act(async () =>
+    root.render(
+      <Viewport
+        geometry={{
+          itemWidth: 278,
+          imageAspectRatio: 16 / 9,
+          footerHeight: "max(80px, calc(3.025rem + 24px))",
+        }}
+      />,
+    ),
+  );
+  const probe = document.querySelector('span[aria-hidden="true"]')!;
+  expect(probe).not.toBeNull();
+  expect(observers[0].observed).toContain(probe);
+  expect(state.rowHeight).toBe(253);
+  await act(async () => {
+    footerHeight = 121;
+    observers[0].trigger();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  });
+  expect(state.rowHeight).toBe(294);
+  expect(state.cardWidth).toBe(278);
+  await act(async () =>
+    root.render(
+      <Viewport
+        geometry={{
+          itemWidth: 278,
+          imageAspectRatio: 16 / 9,
+          footerHeight: 80,
+        }}
+      />,
+    ),
+  );
+  expect(probe.isConnected).toBe(false);
+  expect(state.rowHeight).toBe(253);
 });

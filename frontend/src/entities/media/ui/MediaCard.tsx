@@ -33,6 +33,7 @@ import { mediaQualityBadge } from "../model/mediaVersions";
 import {
   mediaArtworkPath,
   mediaCardAspectRatio,
+  mediaCardTypography,
   type MediaArtworkLayout,
 } from "../model/mediaArtwork";
 import { mediaCardText } from "../model/mediaCardText";
@@ -46,7 +47,6 @@ import {
 } from "shared/lib/navigation";
 import type { MediaItemData } from "../model/media";
 import { MediaRow } from "./MediaRow";
-import { mediaCardTypography } from "./mediaCardTypography";
 import {
   formatMediaRating,
   getPrimaryMediaRating,

@@ -5,6 +5,7 @@ export {
   mediaArtworkPath,
   mediaCardAspectRatio,
   mediaCardWidth,
+  mediaCardTypography,
 } from "./model/mediaArtwork";
 export type { MediaArtworkLayout } from "./model/mediaArtwork";
 export { getIncludeProps } from "./model/mediaIncludes";

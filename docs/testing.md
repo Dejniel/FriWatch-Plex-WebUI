@@ -50,6 +50,9 @@ the claimed flag alone must not report verified ownership. Confirm continuation
 uses ordinary Home/PIN selection. Setup must not add secrets to API responses
 or query/mutation cache; keep the installer code out of browser storage. Mock cloud claiming
 in automated tests; record separately whether a real account was linked.
+After a verified claim (including late verification), explicitly unclaim the same
+test server: setup must offer a fresh code. Replace its identity during submission
+or the ownership read; neither case may verify the replacement server.
 
 Check TV `Seasons` across shows and `Folders` in movie, TV and music libraries.
 Use nested folders with mixed files; verify breadcrumbs, Up, browser history,
@@ -81,6 +84,8 @@ horizontal overflow, action menus and scrolling after resize.
 Also check browser zoom at 125%, 150% and 200%, increased default text size, and
 minimum/maximum card sizes. Verify readable captions, separated virtual rows,
 dialog scrolling and shared card sizing between Home and libraries.
+Include root text sizes of 32 and 36 px without resizing the window; virtual rows
+must retain room for captions and playlist positions, including after navigation.
 With slow authentication and profile settings, verify that the startup spinner
 keeps animating without restarting between stages. Check profile changes during
 loading, cached settings after failure, and Retry.
@@ -88,6 +93,9 @@ Reject server details with 401/403/503, return a missing server identifier, or s
 the response. Startup must end with a recovery message, without mounting Home or
 starting its queries. Retry must recover; profile changes must abort stale reads.
 A failed background server refresh must retain the current screen and its edits.
+Stall only `/media/providers` with valid server details: browsing must become
+available with administration disabled and a retryable warning. Retrying must
+restore capabilities without unmounting the current screen.
 
 For server activity, start a scan or maintenance task in standalone Plex. Check
 live progress, one continuous icon animation, reduced motion, and separate task

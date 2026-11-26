@@ -1,7 +1,6 @@
 export { default as MediaCard } from "./ui/MediaCard";
 export { MediaFiles } from "./ui/MediaFiles";
 export { MediaSourcePath } from "./ui/MediaSourcePath";
-export { mediaCardTypography } from "./ui/mediaCardTypography";
 export { default as MediaRatingValue } from "./ui/MediaRatingValue";
 export type { MediaCardProps } from "./ui/MediaCard";
 export { usePreviewAudio } from "./model/previewAudio";

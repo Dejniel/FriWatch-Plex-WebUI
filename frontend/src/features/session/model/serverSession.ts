@@ -88,7 +88,13 @@ export const useServerSession = create<ServerSessionState>((set, get) => ({
         server: context.server,
         canManageServer: hasPlexFeature(context.providers, "manage"),
         status: "ready",
-        error: null,
+        error: context.capabilitiesUnavailable
+          ? {
+              message:
+                "Plex server permissions could not be checked. Administration is unavailable. Try again.",
+              recovery: "server",
+            }
+          : null,
       });
     } catch (error) {
       if (
