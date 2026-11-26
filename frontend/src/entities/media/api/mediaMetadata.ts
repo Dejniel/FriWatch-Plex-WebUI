@@ -205,6 +205,7 @@ export function readMediaMetadata(
       extraType: integer,
       subtype: text,
       Media: array(readRendition),
+      Location: array((value) => ({ path: identity(object(value).path) })),
       Collection: array(readTag),
       Label: array(readTag),
       Producer: array(readTag),

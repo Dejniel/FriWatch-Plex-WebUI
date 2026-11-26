@@ -17,6 +17,24 @@ export function mediaFileVersions(data: Pick<MediaMetadata, "Media">) {
 }
 export type MediaFileVersion = ReturnType<typeof mediaFileVersions>[number];
 
+/** An item's own files take precedence over optional container locations. */
+export function mediaSourcePaths(
+  data: Pick<MediaMetadata, "Media" | "Location">,
+) {
+  const files = [
+    ...new Set(
+      mediaFileVersions(data)
+        .flatMap((version) => version.parts)
+        .flatMap((part) => (part.file?.trim() ? [part.file] : [])),
+    ),
+  ];
+  return files.length
+    ? files.map((path) => ({ kind: "file" as const, path }))
+    : [...new Set((data.Location ?? []).map((location) => location.path))].map(
+        (path) => ({ kind: "folder" as const, path }),
+      );
+}
+
 export function mediaFilename(path: string) {
   return path.split(/[\\/]/).pop() || path;
 }

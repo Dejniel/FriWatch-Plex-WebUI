@@ -1,4 +1,8 @@
-import type { MediaMetadata } from "entities/media/model";
+import {
+  getMediaMetadata,
+  mediaMetadataQueryKey,
+  type MediaMetadata,
+} from "entities/media/model";
 import { notifyManager } from "@tanstack/react-query";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -9,6 +13,10 @@ import { useMetadataMatch } from "./useMetadataMatch";
 import type { MetadataMatchCandidate } from "./matching";
 
 vi.mock("../api/matching", () => ({ createMetadataMatcher: vi.fn() }));
+vi.mock("entities/media/api/media", async (original) => ({
+  ...(await original<typeof import("entities/media/api/media")>()),
+  getMediaMetadata: vi.fn(),
+}));
 const item = {
   ratingKey: "42",
   title: "Film",
@@ -60,6 +68,7 @@ beforeEach(() => {
   ]);
   source.search.mockResolvedValue([current, candidate]);
   source.apply.mockResolvedValue(undefined);
+  vi.mocked(getMediaMetadata).mockResolvedValue(item);
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -202,4 +211,42 @@ it("cancels reads when the workflow is closed", async () => {
   await act(async () => root.render(null));
   expect(abort.aborted).toBe(true);
   await act(async () => read.resolve([candidate]));
+});
+
+it("shares cached canonical source files without changing them when search criteria change", async () => {
+  serverQueryClient.setQueryData(
+    mediaMetadataQueryKey(source.scope, item.ratingKey),
+    {
+      ...item,
+      Media: [{ Part: [{ file: "/Films/Actual Film.mkv" }] }],
+    },
+  );
+  await open();
+  expect(getMediaMetadata).not.toHaveBeenCalled();
+  expect(state.sourcePaths).toEqual([
+    { kind: "file", path: "/Films/Actual Film.mkv" },
+  ]);
+  await act(async () => state.setCriteria({ title: "A different search" }));
+  await act(async () => state.search());
+  await settle();
+  expect(state.sourcePaths).toEqual([
+    { kind: "file", path: "/Films/Actual Film.mkv" },
+  ]);
+});
+it("keeps matching available after source locations fail and retries only the source read", async () => {
+  vi.mocked(getMediaMetadata).mockRejectedValueOnce(new Error("Offline"));
+  await open();
+  expect(state.sourcePathsError).toBeTruthy();
+  expect(state.canApply).toBe(true);
+  vi.mocked(getMediaMetadata).mockResolvedValue({
+    ...item,
+    Media: [{ Part: [{ file: "/Films/Source.mkv" }] }],
+  });
+  await act(async () => state.retrySourcePaths());
+  await settle();
+  expect(state.sourcePathsError).toBeNull();
+  expect(state.sourcePaths).toEqual([
+    { kind: "file", path: "/Films/Source.mkv" },
+  ]);
+  expect(source.search).toHaveBeenCalledTimes(1);
 });

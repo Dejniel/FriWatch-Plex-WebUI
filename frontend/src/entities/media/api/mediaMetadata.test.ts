@@ -73,6 +73,11 @@ it("reads files, tracks and flags without requiring presentation or technical de
   expect(item.Media?.[0]).not.toHaveProperty("videoCodec");
 });
 
+it.each(["show", "artist", "album"])("preserves source folder locations on %s metadata", (type) => {
+  const item = { ...movie, type, Location: [{ path: "/media/source one" }, { path: "D:\\Media\\source two" }] };
+  expect(readMediaMetadata(item)).toEqual(item);
+});
+
 it("normalizes XML-derived frame rates and photo albums identified by their children path", () => {
   expect(
     readMediaMetadata({
@@ -139,6 +144,9 @@ it.each([
   { ...movie, rating: NaN },
   { ...movie, year: "2026" },
   { ...movie, Media: {} },
+  { ...movie, Location: {} },
+  { ...movie, Location: [{ path: 123 }] },
+  { ...movie, Location: [{ path: "" }] },
   { ...movie, Media: [{ Part: null }] },
   { ...movie, Media: [{ Part: [{ size: "100" }] }] },
   { ...movie, Media: [{ Part: [{ Stream: {} }] }] },

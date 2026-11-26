@@ -1,70 +1,13 @@
-import { ContentCopyRounded } from "@mui/icons-material";
-import {
-  Alert,
-  Box,
-  Grid,
-  IconButton,
-  Paper,
-  Tooltip,
-  Typography,
-} from "@mui/material";
-import { useState, type ReactNode } from "react";
+import { Alert, Box, Grid, Paper, Typography } from "@mui/material";
+import type { ReactNode } from "react";
 import type { MediaMetadata } from "plex/media";
-import { copyText } from "shared/lib/clipboard";
 import {
   formatMediaFileSize,
   mediaFileFacts,
   mediaFileVersions,
-  mediaFilename,
   type MediaFileVersion,
 } from "../model/mediaFiles";
-
-function FilePath({ path }: { path: string }) {
-  const [message, setMessage] = useState<string | null>(null);
-  return (
-    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-      <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography sx={{ fontWeight: 600, overflowWrap: "anywhere" }}>
-          {mediaFilename(path)}
-        </Typography>
-        <Typography
-          component="code"
-          variant="body2"
-          sx={{
-            display: "block",
-            color: "text.secondary",
-            overflowWrap: "anywhere",
-            userSelect: "text",
-          }}
-        >
-          {path}
-        </Typography>
-        {message && (
-          <Typography role="status" variant="caption">
-            {message}
-          </Typography>
-        )}
-      </Box>
-      <Tooltip title="Copy file path">
-        <IconButton
-          aria-label={`Copy path for ${mediaFilename(path)}`}
-          size="small"
-          onClick={() =>
-            void copyText(path).then(
-              () => setMessage("Path copied."),
-              () =>
-                setMessage(
-                  "Could not copy. Select the path to copy it manually.",
-                ),
-            )
-          }
-        >
-          <ContentCopyRounded fontSize="small" />
-        </IconButton>
-      </Tooltip>
-    </Box>
-  );
-}
+import { MediaSourcePath } from "./MediaSourcePath";
 
 /** Read-only inventory; feature-owned callbacks supply permitted operations. */
 export function MediaFiles({
@@ -131,7 +74,7 @@ export function MediaFiles({
                   </Typography>
                 )}
                 {part.file ? (
-                  <FilePath path={part.file} />
+                  <MediaSourcePath path={part.file} />
                 ) : (
                   <Typography color="text.secondary">
                     File path unavailable.

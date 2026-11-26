@@ -165,6 +165,7 @@ interface MetadataFields {
   subtype?: string;
   ratingImage?: string;
   Media?: MediaRendition[];
+  Location?: { path: string }[];
   Genre?: MetadataTag[];
   Collection?: MetadataTag[];
   Label?: MetadataTag[];

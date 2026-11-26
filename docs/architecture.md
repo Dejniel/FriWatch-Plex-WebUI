@@ -243,6 +243,8 @@ Match shares the editor's application-level host and session guards.
 `useMetadataMatch` owns criteria and selection; Query owns agent/result reads,
 cancellation and mutation status. Its API validates native responses and publishes
 scoped synchronization after Match/Unmatch. Video and music reuse the same actions.
+Source paths reuse canonical metadata and the shared file-path presenter; their
+loading or failure does not block matching.
 
 Plex Home membership and permissions come from Plex's Home API, using the active
 profile's account token. Settings observes one native Query resource and revalidates

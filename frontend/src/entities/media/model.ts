@@ -39,6 +39,7 @@ export type {
 export type { MediaItemData } from "./model/media";
 export { mediaFileVersions, mediaFilename, mediaFileFacts, formatMediaFileSize, supportsMediaFiles } from "./model/mediaFiles";
 export type { MediaFileVersion } from "./model/mediaFiles";
+export { mediaSourcePaths } from "./model/mediaFiles";
 export type {
   MediaMetadata,
   MediaRendition,

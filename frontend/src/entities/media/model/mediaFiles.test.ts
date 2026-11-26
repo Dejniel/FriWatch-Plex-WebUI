@@ -3,6 +3,7 @@ import {
   mediaFileFacts,
   mediaFileVersions,
   mediaFilename,
+  mediaSourcePaths,
 } from "./mediaFiles";
 
 it("keeps multipart inventory grouped without requiring playback keys", () => {
@@ -44,4 +45,36 @@ it("does not invent video dimensions for music or photos with missing data", () 
   });
   expect(photo).toContainEqual(["Camera", "Camera Model"]);
   expect(photo).toContainEqual(["Resolution", "4000 × 3000"]);
+});
+
+it("lists every distinct file across versions and parts before container folders", () => {
+  expect(
+    mediaSourcePaths({
+      Media: [
+        { Part: [{ file: "/Films/a.mkv" }, { file: "/Films/b.mkv" }] },
+        { Part: [{ file: "/Films/a.mkv" }, { file: "/Films/c.mkv" }] },
+      ],
+      Location: [{ path: "/Films" }],
+    }),
+  ).toEqual(
+    ["a", "b", "c"].map((name) => ({
+      kind: "file",
+      path: `/Films/${name}.mkv`,
+    })),
+  );
+});
+it("uses returned folders only when the item has no source files", () => {
+  expect(
+    mediaSourcePaths({
+      Location: [
+        { path: "/TV/Show" },
+        { path: "/TV/Show" },
+        { path: "D:\\TV\\Show" },
+      ],
+    }),
+  ).toEqual([
+    { kind: "folder", path: "/TV/Show" },
+    { kind: "folder", path: "D:\\TV\\Show" },
+  ]);
+  expect(mediaSourcePaths({})).toEqual([]);
 });

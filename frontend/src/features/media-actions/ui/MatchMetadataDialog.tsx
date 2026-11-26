@@ -6,6 +6,7 @@ import {
   CircularProgress,
   List,
   ListItemButton,
+  LinearProgress,
   MenuItem,
   Radio,
   TextField,
@@ -13,12 +14,10 @@ import {
 } from "@mui/material";
 import { MovieOutlined, MusicNoteOutlined } from "@mui/icons-material";
 import type { MediaItemData } from "entities/media/model";
+import { MediaSourcePath } from "entities/media/public";
 import { AppDialog } from "shared/ui";
 import { useMetadataMatch } from "../model/useMetadataMatch";
-import {
-  matchActionLabel,
-  matchSourceLabel,
-} from "../model/matching";
+import { matchActionLabel, matchSourceLabel } from "../model/matching";
 
 const languages = [
   ["", "Library default"],
@@ -54,6 +53,11 @@ export default function MatchMetadataDialog({
   } = model;
   const selectedGuid = selected?.guid;
   const music = item.type === "artist" || item.type === "album";
+  const sourceLabel =
+    item.type === "movie" ||
+    model.sourcePaths.some((source) => source.kind === "file")
+      ? "Source files"
+      : "Source folders";
 
   return (
     <AppDialog
@@ -73,6 +77,65 @@ export default function MatchMetadataDialog({
       }
       contentSx={{ p: { xs: 2, sm: 3 } }}
     >
+      <Box
+        component="section"
+        aria-label={sourceLabel}
+        sx={{
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 1,
+          p: 2,
+          mb: 3,
+        }}
+      >
+        <Typography
+          component="h2"
+          variant="subtitle2"
+          sx={{ mb: 1.5, fontWeight: 600 }}
+        >
+          {sourceLabel}
+        </Typography>
+        {model.sourcePathsLoading && (
+          <LinearProgress aria-label="Loading source locations" />
+        )}
+        {model.sourcePathsError && (
+          <Alert
+            severity="warning"
+            sx={{ mb: 1 }}
+            action={
+              <Button color="inherit" onClick={model.retrySourcePaths}>
+                Retry
+              </Button>
+            }
+          >
+            {model.sourcePathsError}
+          </Alert>
+        )}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 1.5,
+            maxHeight: "14rem",
+            overflowY: "auto",
+          }}
+        >
+          {model.sourcePaths.map((source) => (
+            <MediaSourcePath
+              key={source.path}
+              path={source.path}
+              kind={source.kind}
+            />
+          ))}
+        </Box>
+        {!model.sourcePathsLoading &&
+          !model.sourcePathsError &&
+          !model.sourcePaths.length && (
+            <Typography variant="body2" color="text.secondary">
+              Plex did not provide a source file or folder path for this item.
+            </Typography>
+          )}
+      </Box>
       <Box
         component="form"
         onSubmit={(event) => {

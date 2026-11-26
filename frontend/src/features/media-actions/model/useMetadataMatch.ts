@@ -1,6 +1,10 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import type { MediaItemData } from "entities/media/model";
+import {
+  mediaMetadataQueryOptions,
+  mediaSourcePaths,
+  type MediaItemData,
+} from "entities/media/model";
 import { PlexRequestError } from "shared/api/PlexClient";
 import { serverQueryClient } from "shared/api/queryClient";
 import { createMetadataMatcher } from "../api/matching";
@@ -50,6 +54,16 @@ export function useMetadataMatch(
     source.revision,
     initial.ratingKey,
   ];
+  const metadata = useQuery(
+    {
+      ...mediaMetadataQueryOptions(
+        source.scope ?? { serverId: "", profileKey: "" },
+        initial.ratingKey,
+      ),
+      enabled: Boolean(source.scope),
+    },
+    serverQueryClient,
+  );
   const agents = useQuery(
     {
       queryKey: [
@@ -90,12 +104,18 @@ export function useMetadataMatch(
   const errors = metadataMatchCriteriaErrors(criteria);
   const canApply = Boolean(
     selected &&
-      selected.guid !== initial.guid &&
-      !results.isFetching &&
-      !mutation.isPending &&
-      !results.isError,
+    selected.guid !== initial.guid &&
+    !results.isFetching &&
+    !mutation.isPending &&
+    !results.isError,
   );
   return {
+    sourcePaths: metadata.data ? mediaSourcePaths(metadata.data) : [],
+    sourcePathsLoading: metadata.isLoading,
+    sourcePathsError: metadata.isError
+      ? "Plex could not load the source locations."
+      : null,
+    retrySourcePaths: () => void metadata.refetch(),
     criteria,
     setCriteria,
     errors,

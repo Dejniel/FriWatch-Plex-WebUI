@@ -210,7 +210,9 @@ stays unlocked. A background refresh must retain the draft; failed saves must ke
 edits and retry without repeating acknowledged uploads. Change profile/server
 during a save and check that stale completion cannot update the new session.
 
-Check **Match/Fix Match/Unmatch** for movies, shows, artists and albums. Search by
+Check **Match/Fix Match/Unmatch** for movies, shows, artists and albums. Verify all
+source file paths and copying, folder locations when Plex provides them, and
+matching when source locations are absent or fail to load. Search by
 title and [native external ID](https://support.plex.tv/articles/201018497-fix-match-match/),
 choose a PMS-provided agent, and distinguish album editions by artist. Exact IDs
 must ignore the prefilled year; albums require a MusicBrainz release ID. Match

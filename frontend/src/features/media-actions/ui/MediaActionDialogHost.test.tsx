@@ -21,6 +21,7 @@ import {
   openMediaWatchedDialog,
   openMetadataDialog,
   openMetadataUnmatchDialog,
+  openMetadataMatchDialog,
   openMediaFilesDialog,
   openMediaDeleteDialog,
   useMediaActionDialog,
@@ -346,6 +347,85 @@ function deletionOwner() {
     server: { machineIdentifier: "server", allowMediaDeletion: true } as Plex.ServerPreferences,
   });
 }
+
+it("shows every source version above Fix Match and copies the selected path", async () => {
+  deletionOwner();
+  transport.mockImplementation(async (path) => {
+    const pathname = new URL(path, "https://plex.test").pathname;
+    const data =
+      pathname === "/system/agents"
+        ? { Agent: [] }
+        : pathname.endsWith("/matches")
+          ? {
+              SearchResult: [
+                { guid: "plex://movie/correct", name: "Correct film" },
+              ],
+            }
+          : { Metadata: [fileMovie] };
+    return { status: 200, data: { MediaContainer: data } };
+  });
+  const clipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText },
+  });
+  try {
+    await render();
+    await act(async () =>
+      openMetadataMatchDialog({ ...movie, guid: "plex://movie/current" }),
+    );
+    const sources = dialog()!.querySelector('[aria-label="Source files"]')!;
+    expect(sources.textContent).toContain("/Movies/Example/4k.mkv");
+    expect(sources.textContent).toContain("/Movies/Example/1080p.mp4");
+    expect(
+      sources.compareDocumentPosition(dialog()!.querySelector("form")!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(button("Fix Match").disabled).toBe(false);
+    await act(async () =>
+      sources
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="Copy path for 1080p.mp4"]',
+        )!
+        .click(),
+    );
+    expect(writeText).toHaveBeenCalledWith("/Movies/Example/1080p.mp4");
+    expect(sources.textContent).toContain("Path copied.");
+  } finally {
+    if (clipboard) Object.defineProperty(navigator, "clipboard", clipboard);
+    else Reflect.deleteProperty(navigator, "clipboard");
+  }
+});
+
+it.each([
+  { ...movie, type: "show" as const },
+  { ...movie, type: "artist" as const },
+  { ...movie, type: "album" as const },
+])("shows Plex-provided source folders when matching a $type", async (item) => {
+  deletionOwner();
+  transport.mockImplementation(async (path) => {
+    const pathname = new URL(path, "https://plex.test").pathname;
+    const data =
+      pathname === "/system/agents"
+        ? { Agent: [] }
+        : pathname.endsWith("/matches")
+          ? { SearchResult: [] }
+          : {
+              Metadata: [
+                { ...item, Location: [{ path: "/media/Source folder/" }] },
+              ],
+            };
+    return { status: 200, data: { MediaContainer: data } };
+  });
+  await render();
+  await act(async () => openMetadataMatchDialog(item));
+  const sources = dialog()!.querySelector('[aria-label="Source folders"]')!;
+  expect(sources.textContent).toContain("/media/Source folder/");
+  expect(
+    sources.querySelector('[aria-label="Copy path for Source folder"]'),
+  ).not.toBeNull();
+});
 
 it("opens file information for a restricted profile without exposing deletion", async () => {
   transport.mockResolvedValue({ status: 200, data: { MediaContainer: { Metadata: [fileMovie] } } });
