@@ -36,7 +36,11 @@ export function startServerActivityMonitor(session: CapturedPlexSession) {
   const api = createServerActivityApi(session);
   let active = true;
   const current = () => active && session.isCurrent();
-  useActivityState.setState({ context, connection: "connecting", history: [] });
+  useActivityState.setState((state) => ({
+    context,
+    connection: "connecting",
+    history: state.context === context ? state.history : [],
+  }));
   const reads = new Set<Map<string, ActivityUpdate>>();
   async function activities(signal: AbortSignal) {
     // Full SSE records arriving during a snapshot are replayed over that snapshot.
@@ -203,11 +207,15 @@ export function startServerActivityMonitor(session: CapturedPlexSession) {
       });
       void serverQueryClient.cancelQueries({ queryKey: keys.all });
       if (useActivityState.getState().context === context)
-        useActivityState.setState({
-          context: null,
-          connection: "connecting",
-          history: [],
-        });
+        useActivityState.setState(
+          session.isCurrent()
+            ? { connection: "disconnected" }
+            : {
+                context: null,
+                connection: "connecting",
+                history: [],
+              },
+        );
     },
   };
 }

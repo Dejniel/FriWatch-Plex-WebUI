@@ -35,6 +35,7 @@ docker compose -f compose.test.yaml up --build -d
 ```
 
 Open Plex at `http://localhost:32401/web`, sign in, and complete server setup.
+Claim the server for your account; signing in to Plex Web alone is insufficient.
 Optionally set `PLEX_TEST_CLAIM` from [plex.tv/claim](https://www.plex.tv/claim)
 before the first start. Add sample media to the directory and create libraries
 under `/data`. Include movies, episodes, versions, audio tracks, or subtitles
@@ -73,6 +74,10 @@ dialog scrolling and shared card sizing between Home and libraries.
 With slow authentication and profile settings, verify that the startup spinner
 keeps animating without restarting between stages. Check profile changes during
 loading, cached settings after failure, and Retry.
+Reject server details with 401/403/503, return a missing server identifier, or stall
+the response. Startup must end with a recovery message, without mounting Home or
+starting its queries. Retry must recover; profile changes must abort stale reads.
+A failed background server refresh must retain the current screen and its edits.
 
 For server activity, start a scan or maintenance task in standalone Plex. Check
 live progress, one continuous icon animation, reduced motion, and separate task

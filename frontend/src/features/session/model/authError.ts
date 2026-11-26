@@ -1,4 +1,13 @@
 import axios from "axios";
+import { PlexRequestError } from "shared/api/PlexClient";
+import { PlexResponseError } from "shared/api/plexResponse";
+
+export class UnclaimedPlexServerError extends Error {
+  constructor() {
+    super("This Plex server has not been claimed. Complete server setup in Plex Web, then retry.");
+    this.name = "UnclaimedPlexServerError";
+  }
+}
 
 export type AuthErrorContext =
   | "loginStart"
@@ -21,6 +30,16 @@ export function authErrorMessage(
   error: unknown,
   context: AuthErrorContext,
 ): string {
+  if (error instanceof UnclaimedPlexServerError) return error.message;
+  if (error instanceof PlexResponseError && context === "server")
+    return "Plex returned incomplete server information. Try again.";
+  if (error instanceof PlexRequestError) {
+    if (error.status === 401 || error.status === 403)
+      return "This Plex profile does not have access to the configured server. Try signing in again.";
+    return error.status === 504
+      ? "Plex took too long to respond. Try again."
+      : "FriWatch cannot reach the configured Plex server. Try again.";
+  }
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
 

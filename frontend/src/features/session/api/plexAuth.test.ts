@@ -5,9 +5,13 @@ import {
   getHomeProfiles,
   getPin,
   switchHomeProfile,
+  validateServerToken,
+  resolveServerToken,
 } from "./plexAuth";
+import { ProxiedRequest } from "shared/api/backend";
 
 vi.mock("axios");
+vi.mock("shared/api/backend", () => ({ ProxiedRequest: vi.fn() }));
 
 const mockedAxios = axios as Mocked<typeof axios>;
 
@@ -47,7 +51,7 @@ describe("buildPlexAuthUrl", () => {
         /^https:\/\/plex\.tv\/api\/v2\/pins\?.*strong=true/,
       ),
       undefined,
-      { headers: { Accept: "application/json" } },
+      { headers: { Accept: "application/json" }, timeout: 15000 },
     );
   });
 
@@ -107,7 +111,23 @@ describe("buildPlexAuthUrl", () => {
           "X-Plex-Product": "FriWatch",
           "X-Plex-Token": "owner-token",
         }),
+        timeout: 15000,
       },
     );
   });
+});
+
+it("validates cached credentials against a protected resource, not public identity", async () => {
+  vi.mocked(ProxiedRequest).mockResolvedValue({ status: 401, data: {} });
+  await expect(validateServerToken("expired")).resolves.toBe(false);
+  expect(vi.mocked(ProxiedRequest).mock.calls.map((call) => call[0])).toEqual(["/"]);
+  expect(vi.mocked(ProxiedRequest).mock.calls[0][4]).toBeInstanceOf(AbortSignal);
+  vi.mocked(ProxiedRequest).mockResolvedValue({ status: 200, data: { MediaContainer: { machineIdentifier: "server" } } });
+  await expect(validateServerToken("valid")).resolves.toBe(true);
+});
+
+it("explains an unclaimed PMS without looking for a nonexistent account resource", async () => {
+  vi.mocked(ProxiedRequest).mockResolvedValue({ status: 200, data: { MediaContainer: { machineIdentifier: "server", claimed: false } } });
+  await expect(resolveServerToken("account")).rejects.toThrow("has not been claimed");
+  expect(mockedAxios.get).not.toHaveBeenCalled();
 });

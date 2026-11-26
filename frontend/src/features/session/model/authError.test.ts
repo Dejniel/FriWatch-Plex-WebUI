@@ -1,5 +1,7 @@
 import axios from "axios";
-import { authErrorMessage } from "./authError";
+import { authErrorMessage, UnclaimedPlexServerError } from "./authError";
+import { PlexRequestError } from "shared/api/PlexClient";
+import { PlexResponseError } from "shared/api/plexResponse";
 
 function responseError(status: number, data?: unknown) {
   return new axios.AxiosError(
@@ -36,5 +38,12 @@ describe("authErrorMessage", () => {
   it("distinguishes network errors from rejected credentials", () => {
     const error = new axios.AxiosError("Network Error", "ERR_NETWORK");
     expect(authErrorMessage(error, "profiles")).toContain("network connection");
+  });
+
+  it("separates unclaimed servers, access denial, timeouts and malformed context", () => {
+    expect(authErrorMessage(new UnclaimedPlexServerError(), "server")).toContain("has not been claimed");
+    expect(authErrorMessage(new PlexRequestError(401, {}), "server")).toContain("signing in again");
+    expect(authErrorMessage(new PlexRequestError(504, {}), "server")).toContain("too long");
+    expect(authErrorMessage(new PlexResponseError("server details"), "server")).toContain("incomplete server information");
   });
 });

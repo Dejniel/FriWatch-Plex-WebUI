@@ -1,7 +1,7 @@
 import { Alert, Box, Button, CircularProgress } from "@mui/material";
 import { ReactNode, useEffect } from "react";
 import { useAuthSession } from "../model/authSession";
-import { useProfileBootstrap } from "../model/useProfileBootstrap";
+import { useSessionBootstrap } from "../model/useSessionBootstrap";
 import { PLEX_SESSION_INVALID_EVENT } from "../model/sessionEvents";
 import LoginScreen from "./LoginScreen";
 import ProfilePickerScreen from "./ProfilePickerScreen";
@@ -22,9 +22,44 @@ function LoadingScreen() {
   );
 }
 
+function SessionFailure({
+  message,
+  retry,
+  signOut,
+}: {
+  message: string;
+  retry: () => void;
+  signOut: () => void;
+}) {
+  return (
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 2,
+        bgcolor: "background.default",
+        px: 2,
+      }}
+    >
+      <Alert severity="error">{message}</Alert>
+      <Box sx={{ display: "flex", gap: 1 }}>
+        <Button variant="contained" onClick={retry}>
+          Retry
+        </Button>
+        <Button variant="text" onClick={signOut}>
+          Sign out
+        </Button>
+      </Box>
+    </Box>
+  );
+}
+
 export default function SessionGate({ children }: { children: ReactNode }) {
   const { status, error, initialize, signOut } = useAuthSession();
-  const profile = useProfileBootstrap();
+  const bootstrap = useSessionBootstrap();
 
   useEffect(() => {
     initialize();
@@ -32,48 +67,40 @@ export default function SessionGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const revalidate = () => {
-      if (useAuthSession.getState().status !== "initializing") void initialize();
+      if (useAuthSession.getState().status !== "initializing")
+        void initialize();
     };
     window.addEventListener(PLEX_SESSION_INVALID_EVENT, revalidate);
-    return () => window.removeEventListener(PLEX_SESSION_INVALID_EVENT, revalidate);
+    return () =>
+      window.removeEventListener(PLEX_SESSION_INVALID_EVENT, revalidate);
   }, [initialize]);
 
-  if (status === "initializing" || (status === "ready" && profile.pending))
+  if (status === "ready" && bootstrap.serverFailed && bootstrap.serverProblem)
+    return (
+      <SessionFailure
+        message={bootstrap.serverProblem.message}
+        retry={bootstrap.retryServer}
+        signOut={signOut}
+      />
+    );
+  if (status === "initializing" || (status === "ready" && bootstrap.pending))
     return <LoadingScreen />;
   if (status === "signedOut") return <LoginScreen />;
   if (status === "selectingProfile" || status === "unlocking")
     return <ProfilePickerScreen />;
 
-  if (status === "error") {
+  if (status === "error")
     return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 2,
-          bgcolor: "background.default",
-          px: 2,
-        }}
-      >
-        <Alert severity="error">{error || "Authentication failed."}</Alert>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Button variant="contained" onClick={() => initialize()}>
-            Retry
-          </Button>
-          <Button variant="text" onClick={signOut}>
-            Sign out
-          </Button>
-        </Box>
-      </Box>
+      <SessionFailure
+        message={error || "Authentication failed."}
+        retry={() => void initialize()}
+        signOut={signOut}
+      />
     );
-  }
 
   return (
     <>
-      {profile.error && (
+      {(bootstrap.error || bootstrap.serverProblem) && (
         <Box
           sx={{
             position: "fixed",
@@ -82,18 +109,39 @@ export default function SessionGate({ children }: { children: ReactNode }) {
             transform: "translateX(-50%)",
             maxWidth: "calc(100% - 32px)",
             zIndex: 1500,
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
           }}
         >
-          <Alert
-            severity="warning"
-            action={
-              <Button color="inherit" size="small" onClick={profile.retry}>
-                Retry
-              </Button>
-            }
-          >
-            {profile.error}
-          </Alert>
+          {bootstrap.error && (
+            <Alert
+              severity="warning"
+              action={
+                <Button color="inherit" size="small" onClick={bootstrap.retry}>
+                  Retry
+                </Button>
+              }
+            >
+              {bootstrap.error}
+            </Alert>
+          )}
+          {bootstrap.serverProblem && (
+            <Alert
+              severity="warning"
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={bootstrap.retryServer}
+                >
+                  Retry
+                </Button>
+              }
+            >
+              {bootstrap.serverProblem.message}
+            </Alert>
+          )}
         </Box>
       )}
       {children}

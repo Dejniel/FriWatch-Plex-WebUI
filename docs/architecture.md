@@ -42,10 +42,13 @@ the current authenticated Plex request context across layers. Files inside the
 same feature use direct relative imports so their ownership is visible and
 barrel-file cycles are avoided.
 
-`SessionGate` keeps one loading screen through authentication and profile settings.
-Its headless profile bootstrap resets settings on session changes; the settings
-store rejects stale loads and falls back to cached or default settings with a
-retryable warning.
+`SessionGate` keeps one loading screen through authentication, profile settings
+and server context. Its bootstrap cancels obsolete server reads and waits for a
+validated server identity before mounting application screens. Initial failures
+show recovery actions; failed background refreshes retain the current context
+with a warning. Settings fall back to cached/default values after a failed load.
+Cached server credentials are checked against protected server details, rather
+than public `/identity`; unclaimed servers receive an explicit setup message.
 
 Entities expose their supported UI through `public.ts` and may additionally
 expose a headless `model.ts` entry point. API and model code should use the

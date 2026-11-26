@@ -5,6 +5,10 @@ import { APP_VERSION } from "shared/config/version";
 import type { HomeProfile } from "../model/authStorage";
 import { getPlexHomeMembers } from "./plexHome";
 import { homeProfiles } from "../model/plexHome";
+import { PlexClient } from "shared/api/PlexClient";
+import { UnclaimedPlexServerError } from "../model/authError";
+
+const AUTH_TIMEOUT_MS = 15_000;
 
 const xmlParser = new XMLParser({
   attributeNamePrefix: "",
@@ -70,7 +74,7 @@ export async function getAccessToken(pin: string): Promise<Plex.TokenData> {
     `https://plex.tv/api/v2/pins/${pin}?${queryString({
       "X-Plex-Client-Identifier": getClientIdentifier(),
     })}`,
-    { headers: { Accept: "application/json" } },
+    { headers: { Accept: "application/json" }, timeout: AUTH_TIMEOUT_MS },
   );
   return res.data;
 }
@@ -83,7 +87,7 @@ export async function getPin(): Promise<Plex.TokenData> {
       "X-Plex-Product": "FriWatch",
     })}`,
     undefined,
-    { headers: { Accept: "application/json" } },
+    { headers: { Accept: "application/json" }, timeout: AUTH_TIMEOUT_MS },
   );
   return res.data;
 }
@@ -94,6 +98,7 @@ export async function getPlexUser(
   try {
     const res = await axios.get("https://plex.tv/api/v2/user", {
       headers: plexHeaders(token),
+      timeout: AUTH_TIMEOUT_MS,
     });
     return {
       ...res.data,
@@ -152,7 +157,10 @@ export async function switchHomeProfile(
       pin: pin || null,
     })}`,
     undefined,
-    { headers: plexHeaders(ownerToken, "application/xml") },
+    {
+      headers: plexHeaders(ownerToken, "application/xml"),
+      timeout: AUTH_TIMEOUT_MS,
+    },
   );
   const parsed = parseXml(response.data);
   const user = parsed?.user ?? parsed?.User;
@@ -162,16 +170,30 @@ export async function switchHomeProfile(
 }
 
 async function getServerMachineIdentifier(token: string): Promise<string> {
-  const response = await ProxiedRequest("/identity", "GET", {
-    "X-Plex-Token": token,
-    Accept: "application/json",
-  });
-  const data = response.data as { MediaContainer?: { machineIdentifier?: string } };
+  const response = await ProxiedRequest(
+    "/identity",
+    "GET",
+    {
+      "X-Plex-Token": token,
+      Accept: "application/json",
+    },
+    undefined,
+    AbortSignal.timeout(AUTH_TIMEOUT_MS),
+  );
+  const data = response.data as {
+    MediaContainer?: { machineIdentifier?: string; claimed?: boolean };
+  };
   const identifier = data?.MediaContainer?.machineIdentifier;
   if (response.status >= 500)
     throw new Error("FriWatch cannot reach the configured Plex server.");
-  if (response.status !== 200 || !identifier)
+  if (
+    response.status !== 200 ||
+    typeof identifier !== "string" ||
+    !identifier.trim()
+  )
     throw new Error("The selected profile cannot access this Plex server.");
+  if (data.MediaContainer?.claimed === false)
+    throw new UnclaimedPlexServerError();
   return identifier;
 }
 
@@ -181,7 +203,10 @@ export async function resolveServerToken(
   const machineIdentifier = await getServerMachineIdentifier(accountToken);
   const response = await axios.get(
     "https://plex.tv/api/resources?includeHttps=1&includeRelay=1&includeIPv6=1",
-    { headers: plexHeaders(accountToken, "application/xml") },
+    {
+      headers: plexHeaders(accountToken, "application/xml"),
+      timeout: AUTH_TIMEOUT_MS,
+    },
   );
   const devices = asArray<any>(parseXml(response.data)?.MediaContainer?.Device);
   const server = devices.find(
@@ -196,7 +221,15 @@ export async function resolveServerToken(
 
 export async function validateServerToken(token: string): Promise<boolean> {
   try {
-    await getServerMachineIdentifier(token);
+    // /identity is public: its 200 proves reachability, not token access.
+    const response = await new PlexClient(() => token).get<{
+      MediaContainer?: { machineIdentifier?: string };
+    }>("/", AbortSignal.timeout(AUTH_TIMEOUT_MS));
+    if (
+      typeof response?.MediaContainer?.machineIdentifier !== "string" ||
+      !response.MediaContainer.machineIdentifier.trim()
+    )
+      return false;
     return true;
   } catch {
     return false;

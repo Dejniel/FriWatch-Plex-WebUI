@@ -59,6 +59,7 @@ beforeEach(() => {
   focusManager.setFocused(true);
   notifyManager.setScheduler(queueMicrotask);
   serverQueryClient.clear();
+  useActivityState.setState({ context: null, connection: "connecting", history: [] });
   valid = true;
   session = {
     scope: { serverId: "server", profileKey: "profile" },
@@ -252,4 +253,13 @@ it("keeps cached tasks on failed recovery instead of recording them as ended", a
   ).toEqual([task]);
   expect(useActivityState.getState().history).toHaveLength(1);
   expect(useActivityState.getState().history[0].outcome).toBe("error");
+});
+
+it("retains session history across a temporary application remount during bootstrap retry", async () => {
+  monitor = startServerActivityMonitor(session); await settle();
+  monitor.receive(frame("ended", 100));
+  monitor.dispose();
+  monitor = startServerActivityMonitor(session); await settle();
+  expect(useActivityState.getState().history).toHaveLength(1);
+  expect(useActivityState.getState().history[0]).toMatchObject({ title: "Scanning", outcome: "ended" });
 });

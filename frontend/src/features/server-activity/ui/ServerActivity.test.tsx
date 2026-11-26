@@ -68,6 +68,7 @@ beforeEach(async () => {
   vi.resetAllMocks();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   serverQueryClient.clear();
+  useActivityState.setState({ context: null, connection: "connecting", history: [] });
   AuthStorage.saveActiveSession({
     profile: null,
     accountToken: "account",

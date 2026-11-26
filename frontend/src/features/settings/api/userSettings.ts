@@ -11,6 +11,7 @@ function profileHeaders() {
 export async function loadUserSettings(): Promise<Record<string, string>> {
   const response = await axios.get(`${getBackendURL()}/user/options`, {
     headers: profileHeaders(),
+    timeout: 15_000,
   });
   if (!Array.isArray(response.data)) return {};
 

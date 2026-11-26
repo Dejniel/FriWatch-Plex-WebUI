@@ -38,10 +38,6 @@ function App() {
   const sessionRevision = useAuthSession((state) => state.revision);
   usePlexSynchronization(sessionRevision);
 
-  useEffect(() => {
-    void useServerSession.getState().refresh();
-  }, [sessionRevision]);
-
   return (
     <>
       <BigReader />

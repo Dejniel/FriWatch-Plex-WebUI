@@ -90,7 +90,7 @@ function Startup() {
         let reload = false;
 
         const config = await axios
-          .get(`${getBackendURL()}/config`)
+          .get(`${getBackendURL()}/config`, { timeout: 5000 })
           .then((res) => res.data as PerPlexed.Config)
           .catch(() => null);
 
