@@ -24,6 +24,7 @@ import {
   getCachedListItems,
 } from "features/media-lists/model";
 import { applyHomeChanges } from "features/home/model";
+import { applySearchChanges } from "features/search/model";
 import { serverQueryClient } from "shared/api/queryClient";
 
 /** Batch scoped events and obtain canonical evidence; feature/entity rules own publication.
@@ -131,6 +132,7 @@ export function startBrowseSynchronization(
           applyMediaDetailsChanges(client, changes),
           applyLibraryDirectoryChanges(client, changes),
           applyHomeChanges(client, changes),
+          applySearchChanges(client, changes),
         ]);
     } catch {
       if (isCurrent() && !abort.signal.aborted) {

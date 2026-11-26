@@ -12,7 +12,7 @@ export type VirtualGridGeometry = {
   observeRef?: React.RefObject<HTMLElement | null>;
   scrollElementRef?: React.RefObject<HTMLDivElement | null>;
 } & (
-  | { layout: "list"; itemHeight: number }
+  | { layout: "list"; itemHeight: number | string }
   | {
       layout?: "grid";
       itemWidth: number;
@@ -42,37 +42,39 @@ export function useVirtualGrid(options: VirtualGridOptions) {
   const [geometry, setGeometry] = useState({
     width: 0,
     top: 0,
-    footerHeight: 0,
+    fixedHeight: 0,
   });
   const [activeKey, setActiveKey] = useState<string | null | undefined>(
     resetKey,
   );
   const positioned = !resetKey || activeKey === resetKey;
-  const footerHeight =
-    options.layout === "list" ? 0 : (options.footerHeight ?? 68);
+  const fixedHeight =
+    options.layout === "list"
+      ? options.itemHeight
+      : (options.footerHeight ?? 68);
 
   useLayoutEffect(() => {
     const grid = gridElement;
     if (!grid) return;
     // One non-layout probe per viewport keeps CSS units (including rem and calc)
     // in the existing geometry observer, without measuring every media card.
-    const footer =
-      typeof footerHeight === "string" ? document.createElement("span") : null;
-    if (footer) {
-      footer.setAttribute("aria-hidden", "true");
-      Object.assign(footer.style, {
+    const probe =
+      typeof fixedHeight === "string" ? document.createElement("span") : null;
+    if (probe) {
+      probe.setAttribute("aria-hidden", "true");
+      Object.assign(probe.style, {
         position: "fixed",
         top: "0",
         left: "0",
         width: "0",
-        height: footerHeight,
+        height: fixedHeight,
         visibility: "hidden",
         pointerEvents: "none",
         overflow: "hidden",
         padding: "0",
         border: "0",
       });
-      document.body.append(footer);
+      document.body.append(probe);
     }
     let frame = 0;
     const update = () => {
@@ -83,12 +85,12 @@ export function useVirtualGrid(options: VirtualGridOptions) {
         top: scroll
           ? bounds.top - scroll.getBoundingClientRect().top + scroll.scrollTop
           : bounds.top + window.scrollY,
-        footerHeight: footer?.getBoundingClientRect().height ?? 0,
+        fixedHeight: probe?.getBoundingClientRect().height ?? 0,
       };
       setGeometry((current) =>
         current.width === next.width &&
         current.top === next.top &&
-        current.footerHeight === next.footerHeight
+        current.fixedHeight === next.fixedHeight
           ? current
           : next,
       );
@@ -100,17 +102,17 @@ export function useVirtualGrid(options: VirtualGridOptions) {
     update();
     const observer = new ResizeObserver(schedule);
     observer.observe(grid);
-    if (footer) observer.observe(footer);
+    if (probe) observer.observe(probe);
     if (observeRef?.current) observer.observe(observeRef.current);
     if (scrollElementRef?.current) observer.observe(scrollElementRef.current);
     window.addEventListener("resize", schedule);
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
-      footer?.remove();
+      probe?.remove();
       window.removeEventListener("resize", schedule);
     };
-  }, [gridElement, observeRef, scrollElementRef, footerHeight]);
+  }, [gridElement, observeRef, scrollElementRef, fixedHeight]);
 
   const list = options.layout === "list";
   const itemWidth = list ? geometry.width : options.itemWidth;
@@ -131,12 +133,9 @@ export function useVirtualGrid(options: VirtualGridOptions) {
         )
       : itemWidth;
   const rowHeight = Math.ceil(
-    (list
-      ? options.itemHeight
-      : cardWidth / options.imageAspectRatio +
-        (typeof footerHeight === "number"
-          ? footerHeight
-          : geometry.footerHeight)) + VIRTUAL_GRID_GAP,
+    (list ? 0 : cardWidth / options.imageAspectRatio) +
+      (typeof fixedHeight === "number" ? fixedHeight : geometry.fixedHeight) +
+      VIRTUAL_GRID_GAP,
   );
   const displayCount = count ?? Math.max(minimumCount, columns * 6);
   const rowCount = Math.ceil(displayCount / columns);

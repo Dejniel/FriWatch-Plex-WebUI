@@ -1,5 +1,6 @@
 export {
   MAX_CARD_SIZE,
+  MEDIA_ROW_HEIGHT,
   MEDIA_CARD_FOOTER_HEIGHT,
   normalizeCardSize,
   mediaArtworkPath,
@@ -21,6 +22,7 @@ export {
   getMediaByGuid,
   getMediaChildren,
   getMediaMetadata,
+  getMediaMetadataBatch,
 } from "./api/media";
 export {
   chooseBestMediaVersion,

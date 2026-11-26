@@ -441,6 +441,20 @@ when the active profile changes. Setup, stream changes and queue reads are cance
   focused tests where useful.
 - Reuse feature API operations instead of duplicating requests in components.
 
+## Search
+
+Search owns native response decoding and scoped TanStack Query reads for quick
+suggestions and paged results. The results page projects URL filters over those
+pages, continuing until the viewport is filled or the source is exhausted. Plex
+ignores year/library filters on its full-text endpoint; filtering a bounded first
+page would omit valid matches. Count-only probes discover the complete candidate
+limit, which stays fixed across pages to preserve native relevance ordering.
+One native metadata batch per page resolves omitted library IDs without guessing
+from library names or issuing a request per item.
+Search reuses media actions, catalog navigation, virtual geometry and the photo
+viewer. Display-only media changes patch canonical hits; membership/ranking
+changes invalidate the scoped search through the common synchronization flow.
+
 ## Making changes
 
 Use existing ownership as a starting point, expose the needed contracts, and

@@ -116,6 +116,7 @@ interface MetadataFields {
   Guid?: { id: string }[];
   skipChildren?: boolean;
   parentRatingKey?: string;
+  parentYear?: number;
   grandparentRatingKey?: string;
   slug?: string;
   studio?: string;

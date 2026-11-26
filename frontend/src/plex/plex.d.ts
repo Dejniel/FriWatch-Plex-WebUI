@@ -131,10 +131,5 @@ declare namespace Plex {
         country: string;
     }
 
-    interface SearchResult {
-        score: number;
-        Metadata?: import("plex/media").MediaMetadata;
-        Directory?: Directory;
-    }
 
 }

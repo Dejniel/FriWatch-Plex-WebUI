@@ -135,3 +135,27 @@ it("resolves CSS footer geometry and remeasures when text grows without a viewpo
   expect(probe.isConnected).toBe(false);
   expect(state.rowHeight).toBe(253);
 });
+
+it("uses the same CSS measurement for list rows and removes its probe on unmount", async () => {
+  await act(async () =>
+    root.render(
+      <Viewport
+        geometry={{ layout: "list", itemHeight: "max(76px, 4.75rem)" }}
+      />,
+    ),
+  );
+  expect(state.rowHeight).toBe(96);
+  const probe = document.querySelector('span[aria-hidden="true"]')!;
+  expect(probe).not.toBeNull();
+  await act(async () => {
+    footerHeight = 152;
+    observers[0].trigger();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  });
+  expect(state.rowHeight).toBe(168);
+  await act(async () =>
+    root.render(<Viewport geometry={{ layout: "list", itemHeight: 76 }} />),
+  );
+  expect(probe.isConnected).toBe(false);
+  expect(state.rowHeight).toBe(92);
+});

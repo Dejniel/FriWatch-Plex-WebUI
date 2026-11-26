@@ -8,9 +8,40 @@ import {
   readDirectoryMetadata,
 } from "./mediaMetadata";
 import { PlexResponseError } from "shared/api/plexResponse";
+import type { PlexClient } from "shared/api/PlexClient";
 
 async function getMediaContainer(path: string, signal?: AbortSignal) {
   return readMediaContainer(await plexClient.get<unknown>(path, signal));
+}
+
+/** Resolve compact native search results together, without per-hit reads. */
+export async function getMediaMetadataBatch(
+  ids: readonly string[],
+  signal?: AbortSignal,
+  client: PlexClient = plexClient,
+): Promise<MediaMetadata[]> {
+  if (!ids.length) return [];
+  const expected = new Set(ids);
+  const container = readMediaContainer(
+    await client.get(
+      `/library/metadata/${[...expected].map(encodeURIComponent).join(",")}`,
+      signal,
+    ),
+  );
+  const items = [
+    ...container.Metadata.map((item) => readMediaMetadata(item)),
+    ...container.Directory.flatMap((item) => {
+      const metadata = readDirectoryMetadata(item);
+      return metadata ? [metadata] : [];
+    }),
+  ];
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (!expected.has(item.ratingKey) || seen.has(item.ratingKey))
+      throw new PlexResponseError("media metadata");
+    seen.add(item.ratingKey);
+  }
+  return items;
 }
 
 export async function getMediaMetadata(

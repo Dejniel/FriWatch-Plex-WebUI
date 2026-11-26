@@ -10,16 +10,13 @@ interface NavigableMedia {
   ratingKey: string;
   type?: string;
   grandparentRatingKey?: string;
+  parentRatingKey?: string;
   guid?: string;
   viewOffset?: number;
 }
 
 type MediaDetailsTab =
-  | "overview"
-  | "episodes"
-  | "details"
-  | "reviews"
-  | "media";
+  "overview" | "episodes" | "details" | "reviews" | "media";
 
 export interface MediaDetailsOptions {
   exactItem?: boolean;
@@ -28,7 +25,7 @@ export interface MediaDetailsOptions {
 
 function withQuery(
   location: AppLocation,
-  update: (params: URLSearchParams) => void
+  update: (params: URLSearchParams) => void,
 ): To {
   const params = new URLSearchParams(location.search);
   update(params);
@@ -71,7 +68,7 @@ export function mediaDetailsTo(
 export function libraryBrowseTo(
   location: AppLocation,
   key: string,
-  props?: Record<string, unknown>
+  props?: Record<string, unknown>,
 ): To {
   return withQuery(location, (params) => {
     params.delete("mid");
@@ -94,7 +91,13 @@ export function mediaWatchTo(item: NavigableMedia): string {
 
 export function libraryViewTo(
   location: AppLocation,
-  view: "recommendations" | "browse" | "photos" | "watchlist" | "collections" | "playlists"
+  view:
+    | "recommendations"
+    | "browse"
+    | "photos"
+    | "watchlist"
+    | "collections"
+    | "playlists",
 ): To {
   return withQuery(location, (params) => {
     if ((params.get("view") === "photos") !== (view === "photos")) {
@@ -111,7 +114,7 @@ export function libraryViewTo(
 
 export function recommendationShelfTo(
   location: AppLocation,
-  shelfId: string
+  shelfId: string,
 ): To {
   return withQuery(location, (params) => {
     params.set("view", "recommendations");
@@ -120,10 +123,30 @@ export function recommendationShelfTo(
 }
 
 /** Catalog containers are pages; photo preview stays in the current result. */
-export function catalogItemTo(location: AppLocation, item: NavigableMedia & { librarySectionID?: number }): To | null {
-  const section = item.librarySectionID || location.pathname.match(/^\/browse\/(\d+)/)?.[1];
+export function catalogItemTo(
+  location: AppLocation,
+  item: NavigableMedia & { librarySectionID?: number },
+): To | null {
+  const section =
+    item.librarySectionID || location.pathname.match(/^\/browse\/(\d+)/)?.[1];
   if (!section) return null;
-  const id = item.type === "track" ? item.grandparentRatingKey : item.ratingKey;
-  if (!id || !["artist", "album", "track", "photoalbum"].includes(item.type ?? "")) return null;
+  const id = item.type === "track" ? item.parentRatingKey : item.ratingKey;
+  if (
+    !id ||
+    !["artist", "album", "track", "photoalbum"].includes(item.type ?? "")
+  )
+    return null;
   return { pathname: `/browse/${section}/item/${id}` };
+}
+
+/** The source owns photo previews; all other media have a shared destination. */
+export function mediaItemTo(
+  location: AppLocation,
+  item: NavigableMedia & { librarySectionID?: number },
+  plexTvSource = false,
+): To | null {
+  if (["movie", "show", "season", "episode"].includes(item.type ?? ""))
+    return mediaDetailsTo(location, item, plexTvSource);
+  if (item.type === "clip") return mediaWatchTo(item);
+  return catalogItemTo(location, item);
 }

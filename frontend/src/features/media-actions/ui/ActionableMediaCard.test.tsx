@@ -37,7 +37,8 @@ it.each(["artist", "album", "track", "photoalbum", "photo"] as const)(
       title: "Catalog item",
       thumb: "/thumb",
       librarySectionID: 3,
-      grandparentRatingKey: "20",
+      grandparentRatingKey: "30",
+      parentRatingKey: "20",
     };
     await act(async () =>
       root.render(

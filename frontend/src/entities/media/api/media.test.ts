@@ -1,6 +1,6 @@
 import type { Mock } from "vitest";
 import { plexClient } from "features/session/model";
-import { getMediaByGuid, getMediaChildren, getMediaMetadata } from "./media";
+import { getMediaByGuid, getMediaChildren, getMediaMetadata, getMediaMetadataBatch } from "./media";
 
 vi.mock("features/session/model", () => ({
   plexClient: { get: vi.fn() },
@@ -139,4 +139,18 @@ it("fails the whole children read if an actual media row lacks its identity", as
     },
   });
   await expect(getMediaChildren("1")).rejects.toThrow("invalid media metadata");
+});
+
+
+it("decodes a native batch including photo albums and rejects unexpected identities", async () => {
+  vi.mocked(plexClient.get).mockResolvedValueOnce({ MediaContainer: {
+    Metadata: [{ ratingKey: "1", type: "track", title: "Track", parentYear: 2021, librarySectionID: 3 }],
+    Directory: [{ ratingKey: "2", type: "photo", title: "Album", librarySectionID: 4 }],
+  } });
+  await expect(getMediaMetadataBatch(["1", "2", "1"])).resolves.toMatchObject([
+    { ratingKey: "1", parentYear: 2021, librarySectionID: 3 }, { ratingKey: "2", type: "photoalbum", librarySectionID: 4 },
+  ]);
+  expect(plexClient.get).toHaveBeenCalledWith("/library/metadata/1,2", undefined);
+  vi.mocked(plexClient.get).mockResolvedValueOnce({ MediaContainer: { Metadata: [{ ratingKey: "other", type: "movie", title: "Other" }] } });
+  await expect(getMediaMetadataBatch(["1"])).rejects.toThrow("invalid media metadata");
 });

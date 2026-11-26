@@ -1,5 +1,7 @@
 export type MediaArtworkLayout = "landscape" | "poster" | "square";
 
+export const MEDIA_ROW_HEIGHT = "max(76px, 4.75rem)";
+
 export const DEFAULT_CARD_SIZE = 40;
 export const MAX_CARD_SIZE = 200;
 const titleMaxRem = 1.25;

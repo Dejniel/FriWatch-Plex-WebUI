@@ -21,10 +21,11 @@ FriWatch originated as a fork of [Ipmake/NevuForPlex](https://github.com/Ipmake/
 ### Libraries and personal media
 
 - **Plex-native authentication** with Plex Home profile selection, protected-profile PIN entry, and optional profile remembering.
-- **Movies and TV** with global search, Continue Watching, recommendations, recently added media and new releases. Title pages include trailers, cast, related titles, extras, and technical media information.
+- **Movies and TV** with Continue Watching, recommendations, recently added media and new releases. Title pages include trailers, cast, related titles, extras, and technical media information.
 - **Music** with artist and album pages, track lists, and a persistent player that keeps playing during navigation. Edit the Plex queue, shuffle, repeat, or start a playlist from a selected song; reload restores the queue entry and position paused.
 - **Photos** with native album browsing, a chronological `All photos` view, filters and sorting. The gallery includes fullscreen viewing, zoom, slideshows and photo information; `My albums` stores personal photo selections as Plex playlists.
 - **Configurable library browsing** with standard and advanced filters, watched-state and media-type filters, sorting, adjustable card sizes shared with Home, and landscape or poster layouts saved per Plex Home profile. TV seasons and movie, TV and music folders have dedicated views; tracks and folders use detailed lists.
+- **Global search** across films, shows, episodes, artists, albums, tracks and photos. Quick suggestions lead to a full results page with Plex relevance ordering, type/library/year filters, shared media actions, and dedicated music/photo views.
 - **Plex Watchlist** inside libraries with an optional library filter, search, sorting, and local availability labels; the same view opens the full list from Home.
 - **Collections, playlists and personal photo albums** with search, sorting and paged contents. Media menus add items to existing or new lists. Own manual video/music playlists and photo albums support name/description editing, reordering, entry removal and deletion; playlists play in Plex order. Adding to collections follows library management permissions.
 - **Personalized navigation** on desktop and mobile, with library pinning, ordering, and optional icons only for each profile. The top bar groups remaining libraries in a compact selector with full names.
@@ -54,7 +55,7 @@ FriWatch originated as a fork of [Ipmake/NevuForPlex](https://github.com/Ipmake/
 - **Optional native HTTPS** with mounted PEM files or a persistent self-signed certificate.
 - **Self-hosted Docker deployment** with reproducible multi-platform images built from lockfiles and published to GHCR.
 
-Global search currently covers movies and TV. Library-wide multiple selection,
+Library-wide multiple selection,
 smart playlist/collection rule editing, and browsing multiple Plex servers together
 remain planned; see the [product roadmap](docs/roadmap.md).
 

@@ -1,15 +1,16 @@
 import { Box, Stack, Typography } from "@mui/material";
-import { MovieOutlined, StarRounded } from "@mui/icons-material";
+import { StarRounded } from "@mui/icons-material";
 import { Link, useLocation } from "react-router-dom";
 import { useImageLoading, imageFadeSx } from "shared/ui/useImageLoading";
-import { mediaDetailsTo } from "shared/lib/navigation";
+import { mediaItemTo } from "shared/lib/navigation";
 import {
   formatMediaRating,
   getPrimaryMediaRating,
 } from "../model/mediaRatings";
-import { mediaArtworkPath } from "../model/mediaArtwork";
+import { MEDIA_ROW_HEIGHT, mediaArtworkPath } from "../model/mediaArtwork";
 import { mediaCardText } from "../model/mediaCardText";
 import { getTranscodeImageURL } from "../model/mediaImages";
+import { MediaTypePlaceholder } from "./MediaTypePlaceholder";
 import type { MediaCardProps } from "./MediaCard";
 
 /** A detail row shares the same action owner as the corresponding media card. */
@@ -18,20 +19,29 @@ export function MediaRow({
   PlexTvSource,
   overlayActions,
   onContextMenu,
+  to,
+  context,
 }: MediaCardProps) {
   const location = useLocation();
   const artwork = mediaArtworkPath(item, "poster");
-  const src = artwork ? getTranscodeImageURL(artwork, 120, 180) : null;
+  const square = ["artist", "album", "track", "photo", "photoalbum"].includes(
+    item.type,
+  );
+  const src = artwork
+    ? getTranscodeImageURL(artwork, 120, square ? 120 : 180)
+    : null;
   const { status, imageProps } = useImageLoading(src);
   const text = mediaCardText(item, "landscape");
   const rating = getPrimaryMediaRating(item);
+  const target =
+    to === undefined ? mediaItemTo(location, item, PlexTvSource) : to;
   return (
     <Stack
       direction="row"
       role="listitem"
       onContextMenu={onContextMenu}
       sx={{
-        height: 76,
+        height: MEDIA_ROW_HEIGHT,
         alignItems: "center",
         gap: { xs: 1, sm: 2 },
         px: 1,
@@ -40,8 +50,7 @@ export function MediaRow({
       }}
     >
       <Box
-        component={Link}
-        to={mediaDetailsTo(location, item, PlexTvSource)}
+        {...(target ? { component: Link, to: target } : {})}
         sx={{
           display: "flex",
           alignItems: "center",
@@ -55,12 +64,13 @@ export function MediaRow({
         <Box
           sx={{
             width: 40,
-            height: 60,
+            height: square ? 40 : 60,
             flexShrink: 0,
             borderRadius: 0.5,
             overflow: "hidden",
             bgcolor: "action.hover",
-            display: { xs: "none", sm: "flex" },
+            color: "text.disabled",
+            display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
@@ -82,7 +92,7 @@ export function MediaRow({
               }}
             />
           ) : (
-            <MovieOutlined color="disabled" />
+            <MediaTypePlaceholder type={item.type} size="1.5rem" />
           )}
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -90,7 +100,7 @@ export function MediaRow({
             {text.title}
           </Typography>
           <Typography noWrap variant="body2" color="text.secondary">
-            {text.subtitle}
+            {[context, text.subtitle].filter(Boolean).join(" · ")}
           </Typography>
         </Box>
       </Box>

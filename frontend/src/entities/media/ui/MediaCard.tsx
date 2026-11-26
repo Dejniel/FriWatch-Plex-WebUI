@@ -3,11 +3,6 @@ import {
   VolumeOffRounded,
   VolumeUpRounded,
   StarRounded,
-  MovieOutlined,
-  TvRounded,
-  MusicNoteRounded,
-  PhotoOutlined,
-  VideoLibraryOutlined,
 } from "@mui/icons-material";
 import {
   Box,
@@ -18,7 +13,7 @@ import {
   Skeleton,
 } from "@mui/material";
 import React, { JSX, memo } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, type To } from "react-router-dom";
 import { isVideoLibraryItemType } from "@friwatch/contracts";
 import {
   getResponsiveTranscodeImageProps,
@@ -40,13 +35,10 @@ import { mediaCardText } from "../model/mediaCardText";
 import { isMediaWatched } from "../model/mediaWatchedState";
 import { alpha } from "@mui/material/styles";
 import { useImageLoading, imageFadeSx } from "shared/ui/useImageLoading";
-import {
-  catalogItemTo,
-  mediaDetailsTo,
-  mediaWatchTo,
-} from "shared/lib/navigation";
+import { mediaItemTo } from "shared/lib/navigation";
 import type { MediaItemData } from "../model/media";
 import { MediaRow } from "./MediaRow";
+import { MediaTypePlaceholder } from "./MediaTypePlaceholder";
 import {
   formatMediaRating,
   getPrimaryMediaRating,
@@ -62,6 +54,8 @@ export interface MediaCardProps {
   overlayActions?: React.ReactNode;
   onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
   presentation?: "grid" | "list";
+  to?: To | null;
+  context?: string;
 }
 
 function MediaCard(props: MediaCardProps) {
@@ -80,6 +74,7 @@ function GridMediaCard({
   imageLoading = "lazy",
   overlayActions,
   onContextMenu,
+  to,
 }: MediaCardProps): JSX.Element {
   const location = useLocation();
   const { muted } = usePreviewAudio();
@@ -106,17 +101,13 @@ function GridMediaCard({
         widths:
           layout === "poster" ? POSTER_IMAGE_WIDTHS : LANDSCAPE_IMAGE_WIDTHS,
         aspectRatio: mediaCardAspectRatio(layout),
-        sizes:
-          imageSizes || "(max-width: 600px) calc(100vw - 16px), 320px",
+        sizes: imageSizes || "(max-width: 600px) calc(100vw - 16px), 320px",
         fallbackWidth: layout === "poster" ? 480 : 640,
       })
     : null;
   const { status: artworkStatus, imageProps } = useImageLoading(artwork?.src);
-  const detailsTarget = video
-    ? mediaDetailsTo(location, item, PlexTvSource)
-    : item.type === "clip"
-      ? mediaWatchTo(item)
-      : catalogItemTo(location, item);
+  const detailsTarget =
+    to === undefined ? mediaItemTo(location, item, PlexTvSource) : to;
 
   return (
     <Box
@@ -519,16 +510,3 @@ function GridMediaCard({
 }
 
 export default memo(MediaCard);
-
-function MediaTypePlaceholder({ type }: { type: string }) {
-  const sx = { fontSize: "clamp(38px, 6vw, 72px)" };
-
-  if (["show", "season", "episode"].includes(type))
-    return <TvRounded sx={sx} />;
-  if (["artist", "album", "track"].includes(type))
-    return <MusicNoteRounded sx={sx} />;
-  if (type === "photo" || type === "photoalbum")
-    return <PhotoOutlined sx={sx} />;
-  if (["movie", "video"].includes(type)) return <MovieOutlined sx={sx} />;
-  return <VideoLibraryOutlined sx={sx} />;
-}

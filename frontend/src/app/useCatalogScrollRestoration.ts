@@ -15,7 +15,7 @@ export function useCatalogScrollRestoration() {
     let frame = 0;
     let observer: ResizeObserver | null = null;
     if (
-      location.pathname.startsWith("/browse/") &&
+      (location.pathname.startsWith("/browse/") || location.pathname.startsWith("/search")) &&
       (changedPath || target !== undefined)
     ) {
       const restore = () => {

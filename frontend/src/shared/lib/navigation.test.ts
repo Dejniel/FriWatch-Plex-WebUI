@@ -108,7 +108,7 @@ it("opens catalog pages independently of video dialogs and preserves the library
   const { catalogItemTo } = await import("./navigation");
   const location = { pathname: "/browse/3", search: "?type=album&sort=year:desc&genre=rock" };
   expect(catalogItemTo(location, { ratingKey: "300", type: "album" })).toEqual({ pathname: "/browse/3/item/300" });
-  expect(catalogItemTo(location, { ratingKey: "401", type: "track", grandparentRatingKey: "200" })).toEqual({ pathname: "/browse/3/item/200" });
+  expect(catalogItemTo(location, { ratingKey: "401", type: "track", grandparentRatingKey: "100", parentRatingKey: "200" })).toEqual({ pathname: "/browse/3/item/200" });
   expect(catalogItemTo(location, { ratingKey: "300", type: "photo" })).toBeNull();
 });
 

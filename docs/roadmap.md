@@ -26,10 +26,8 @@ and the actions below remain planned.
 
 ## Later
 
-### Search and smart lists
+### Smart lists
 
-- Extend global search to artists, albums, tracks and photos; this remains
-  deferred while the basic music/photo workflows are completed.
 - Add creation and editing of smart playlist/collection rules, with Plex
   evaluating list membership.
 

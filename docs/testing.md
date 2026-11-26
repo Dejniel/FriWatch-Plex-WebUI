@@ -254,3 +254,14 @@ away preserves the dialog. Closing or switching profiles must cancel stale work.
 
 Stop with `docker compose -f compose.test.yaml down`. Adding `-v` resets the
 test stack's volumes; sample media remains in the host directory.
+
+## Full search results
+
+Check quick suggestions and Enter/View all results, then search across video,
+music and photos. Verify type, library, exact-year and year-range filters in the
+URL, removable chips, empty results, and back/forward scroll restoration. Include
+a match beyond the first 100 native results and filtered pages with no matches;
+the page must continue loading before declaring the result empty. Check retry
+after transport failure or changed source totals, cancellation during typing and
+profile switching, keyboard navigation, phone widths and enlarged text. Confirm
+that rows/cards use the existing playback, action-menu and photo-viewer flows.

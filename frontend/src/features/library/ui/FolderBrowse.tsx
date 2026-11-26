@@ -7,6 +7,7 @@ import { Box, Breadcrumbs, Button, Stack, Typography } from "@mui/material";
 import type React from "react";
 import { libraryEntryKey } from "@friwatch/contracts";
 import { ActionableMediaCard } from "features/media-actions/public";
+import { MEDIA_ROW_HEIGHT } from "entities/media/model";
 import { TrackRow } from "features/music/public";
 import { CollectionViewport } from "shared/ui/CollectionViewport";
 import { useLibraryViewport } from "../model/useLibraryViewport";
@@ -22,7 +23,7 @@ export function FolderBrowse({
   const { folderPath, setFolderPath } = state;
   const { grid, range, hasData } = useLibraryViewport(state.query, {
     layout: "list",
-    itemHeight: 76,
+    itemHeight: MEDIA_ROW_HEIGHT,
     observeRef,
   });
   return (
