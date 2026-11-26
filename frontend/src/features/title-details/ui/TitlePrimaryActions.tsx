@@ -30,6 +30,7 @@ import {
   resolvePlaybackTarget,
   type MediaActionCapabilities,
   renderMetadataMatchingMenuItems,
+  renderMediaFileMenuItems,
 } from "features/media-actions/public";
 import {
   HeroWatchlistButton,
@@ -114,6 +115,7 @@ export default function TitlePrimaryActions({
   const downloadMenuRef = useRef<{ open: (anchor: HTMLElement) => void }>(null);
   const ratingMenuRef = useRef<{ open: (anchor: HTMLElement) => void }>(null);
   const hasMenuActions =
+    capabilities.canViewFiles ||
     capabilities.canAddToPlaylist ||
     capabilities.canAddToCollection ||
     capabilities.canUnmatch;
@@ -379,6 +381,7 @@ export default function TitlePrimaryActions({
           onClose: () => setMenuAnchor(null),
           showMatch: false,
         })}
+        {renderMediaFileMenuItems({ item: data, data, capabilities, onClose: () => setMenuAnchor(null) })}
         {renderMediaListMenuItems({
           capabilities,
           onSelect: (kind) => {

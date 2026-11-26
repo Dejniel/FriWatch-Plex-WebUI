@@ -64,7 +64,7 @@ export default function ConfirmDialog({
           {error}
         </Alert>
       )}
-      <DialogContentText>{message}</DialogContentText>
+      <DialogContentText component="div">{message}</DialogContentText>
     </AppDialog>
   );
 }

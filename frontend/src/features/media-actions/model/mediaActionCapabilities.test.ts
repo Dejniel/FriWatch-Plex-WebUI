@@ -19,6 +19,8 @@ it("allows a manager to edit, match, unmatch, download and mark a local movie", 
     canEditMetadata: true,
     canMatch: true,
     canUnmatch: true,
+    canViewFiles: true,
+    canDeleteFiles: false,
     canDownload: true,
     canRate: true,
     canSetWatched: true,
@@ -47,6 +49,8 @@ it("allows managing a show but downloads only individual video files", () => {
     canEditMetadata: true,
     canMatch: true,
     canUnmatch: true,
+    canViewFiles: false,
+    canDeleteFiles: false,
     canDownload: false,
     canRate: true,
     canSetWatched: true,
@@ -71,6 +75,8 @@ it("allows editing and downloading an episode and uses its show for similar titl
     canEditMetadata: true,
     canMatch: false,
     canUnmatch: false,
+    canViewFiles: true,
+    canDeleteFiles: false,
     canDownload: true,
     canRate: true,
     canSetWatched: true,
@@ -94,6 +100,8 @@ it("keeps watched, similar and permitted download actions available to a non-man
     canEditMetadata: false,
     canMatch: false,
     canUnmatch: false,
+    canViewFiles: true,
+    canDeleteFiles: false,
     canDownload: true,
     canRate: true,
     canSetWatched: true,
@@ -117,6 +125,8 @@ it.each(["movie", "show", "episode"])(
       canEditMetadata: false,
       canMatch: false,
       canUnmatch: false,
+      canViewFiles: false,
+      canDeleteFiles: false,
       canDownload: false,
       canRate: false,
       canSetWatched: false,
@@ -168,6 +178,7 @@ it.each(["artist", "album", "track", "photoalbum", "photo"] as const)(
     const item: LibraryCardDto = { ratingKey: "10", type, title: "Catalog item" };
     expect(getMediaActionCapabilities(item, manager))
       .toEqual({ canEditMetadata: true, canMatch: ["artist", "album"].includes(type), canUnmatch: false,
+        canViewFiles: ["track", "photo"].includes(type), canDeleteFiles: false,
         canDownload: ["track", "photo"].includes(type), canRate: true, canSetWatched: false, similarRatingKey: null,
         canAddToCollection: false, canAddToPlaylist: ["artist", "album", "track", "photo"].includes(type) });
   },
@@ -183,3 +194,13 @@ it.each(["artist", "album", "track", "photoalbum", "photo", "clip"] as const)(
       .toMatchObject({ canRate: false, canDownload: false });
   },
 );
+
+it("keeps file information independent from deletion permission", () => {
+  expect(getMediaActionCapabilities(movie, manager)).toMatchObject({ canViewFiles: true, canDeleteFiles: false });
+  expect(getMediaActionCapabilities(movie, { ...manager, allowMediaDeletion: true }))
+    .toMatchObject({ canViewFiles: true, canDeleteFiles: true });
+  expect(getMediaActionCapabilities(movie, { ...manager, canManageServer: false, allowMediaDeletion: true }))
+    .toMatchObject({ canViewFiles: true, canDeleteFiles: false });
+  expect(getMediaActionCapabilities({ ...movie, type: "show" }, { ...manager, allowMediaDeletion: true }))
+    .toMatchObject({ canViewFiles: false, canDeleteFiles: false });
+});

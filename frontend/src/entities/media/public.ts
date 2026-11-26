@@ -1,4 +1,5 @@
 export { default as MediaCard } from "./ui/MediaCard";
+export { MediaFiles } from "./ui/MediaFiles";
 export { mediaCardTypography } from "./ui/mediaCardTypography";
 export { default as MediaRatingValue } from "./ui/MediaRatingValue";
 export type { MediaCardProps } from "./ui/MediaCard";

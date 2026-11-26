@@ -3,6 +3,7 @@ import type {
   MediaRendition,
   MediaPart,
 } from "entities/media/model";
+import { formatMediaFileSize, mediaFilename } from "entities/media/model";
 import { AuthStorage } from "features/session/model";
 import { getBackendURL } from "shared/api/backend";
 
@@ -14,14 +15,7 @@ export interface OriginalDownload {
 }
 
 export function formatDownloadDetails(download: OriginalDownload): string {
-  const bytes = download.part.size;
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const index = bytes
-    ? Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
-    : 0;
-  const size = bytes
-    ? `${(bytes / 1024 ** index).toFixed(index > 2 ? 1 : 0)} ${units[index]}`
-    : "Unknown size";
+  const size = formatMediaFileSize(download.part.size) ?? "Unknown size";
   const resolution = download.media.videoResolution
     ? `${download.media.videoResolution}${/^\d+$/.test(download.media.videoResolution) ? "p" : ""}`
     : null;
@@ -44,7 +38,7 @@ function fallbackFilename(data: MediaMetadata, part: MediaPart): string {
 }
 
 export function originalFilename(data: MediaMetadata, part: MediaPart): string {
-  return part.file?.split(/[\\/]/).pop() || fallbackFilename(data, part);
+  return part.file ? mediaFilename(part.file) : fallbackFilename(data, part);
 }
 
 export function getOriginalDownloads(

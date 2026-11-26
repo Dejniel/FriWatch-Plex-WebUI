@@ -14,7 +14,7 @@ import {
   Menu,
   MenuItem,
 } from "@mui/material";
-import { isMediaWatched, type MediaItemData } from "entities/media/model";
+import { isMediaWatched, type MediaItemData, type MediaMetadata } from "entities/media/model";
 import { WatchlistMenuItem } from "features/watchlist/public";
 import {
   renderMediaListMenuItems,
@@ -29,6 +29,7 @@ import type { OriginalDownload } from "../model/downloads";
 import { renderOriginalDownloadMenuItems } from "./OriginalDownloadMenuItems";
 import { renderMetadataMatchingMenuItems } from "./MetadataMatchingMenuItems";
 import type { MediaActionCapabilities } from "../model/mediaActionCapabilities";
+import { renderMediaFileMenuItems } from "./MediaFileMenuItems";
 
 export interface MediaMenuAnchor {
   element?: HTMLElement;
@@ -42,6 +43,7 @@ export default function MediaActionsMenu({
   downloads,
   downloadsLoading,
   item,
+  metadata,
   location,
   onClose,
   onAddToList,
@@ -57,6 +59,7 @@ export default function MediaActionsMenu({
   downloads: OriginalDownload[];
   downloadsLoading: boolean;
   item: MediaItemData;
+  metadata?: MediaMetadata | null;
   location: AppLocation;
   onClose: () => void;
   onAddToList: (kind: MediaListKind) => void;
@@ -159,10 +162,11 @@ export default function MediaActionsMenu({
       )}
 
       {renderMetadataMatchingMenuItems({ item, capabilities, onClose })}
+      {renderMediaFileMenuItems({ item, data: metadata, capabilities, onClose })}
 
       <MenuItem component={Link} to={detailsTarget} onClick={onClose}>
         <ListItemIcon><InfoOutlined fontSize="small" /></ListItemIcon>
-        <ListItemText>Get Info</ListItemText>
+        <ListItemText>View details</ListItemText>
       </MenuItem>
     </Menu>
   );

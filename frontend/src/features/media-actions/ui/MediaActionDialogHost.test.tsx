@@ -1,6 +1,6 @@
 import { StrictMode, act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { notifyManager } from "@tanstack/react-query";
 import {
   AuthStorage,
@@ -21,6 +21,8 @@ import {
   openMediaWatchedDialog,
   openMetadataDialog,
   openMetadataUnmatchDialog,
+  openMediaFilesDialog,
+  openMediaDeleteDialog,
   useMediaActionDialog,
 } from "../model/mediaActionDialog";
 
@@ -327,4 +329,113 @@ it("cancels a confirmation before any write", async () => {
   await click("Cancel");
   expect(transport).not.toHaveBeenCalled();
   expect(useMediaActionDialog.getState().selection).toBeNull();
+});
+
+const fileMovie: MediaMetadata = {
+  ...movie,
+  Media: [
+    { id: 100, videoCodec: "hevc", Part: [{ id: 110, file: "/Movies/Example/4k.mkv", size: 100 }] },
+    { id: 200, videoCodec: "h264", Part: [{ id: 210, file: "/Movies/Example/1080p.mp4", size: 50 }] },
+  ],
+};
+function deletionOwner() {
+  useAuthSession.setState({ activeUser: { id: 1, restricted: false } as Plex.UserData,
+    activeProfile: { id: 1, title: "Owner", isOwner: true, restricted: false, protected: false },
+  });
+  useServerSession.setState({ canManageServer: true,
+    server: { machineIdentifier: "server", allowMediaDeletion: true } as Plex.ServerPreferences,
+  });
+}
+
+it("opens file information for a restricted profile without exposing deletion", async () => {
+  transport.mockResolvedValue({ status: 200, data: { MediaContainer: { Metadata: [fileMovie] } } });
+  await render();
+  await act(async () => openMediaFilesDialog(movie));
+  expect(dialog()?.textContent).toContain("/Movies/Example/4k.mkv");
+  expect(dialog()?.textContent).toContain("/Movies/Example/1080p.mp4");
+  expect(button("Delete all files…")).toBeUndefined();
+});
+
+it("shows the exact files, waits for deletion, and reopens the surviving version", async () => {
+  deletionOwner();
+  let current: MediaMetadata | null = fileMovie;
+  const pending = deferred();
+  transport.mockImplementation(async (path, method) => {
+    if (path === "/") return { status: 200, data: { MediaContainer: { machineIdentifier: "server", allowMediaDeletion: true } } };
+    if (method === "DELETE") return pending.promise;
+    return { status: 200, data: { MediaContainer: { Metadata: [current] } } };
+  });
+  await render();
+  await act(async () => openMediaFilesDialog(movie));
+  await click("Delete this version…");
+  expect(dialog()?.textContent).toContain("/Movies/Example/4k.mkv");
+  expect(dialog()?.textContent).not.toContain("/Movies/Example/1080p.mp4");
+  expect(dialog()?.textContent).toContain("deleted from disk");
+  await click("Delete");
+  expect(dialog()?.textContent).toContain("Deleting…");
+  expect(button("Cancel").disabled).toBe(true);
+  await act(async () => {
+    current = { ...fileMovie, Media: [fileMovie.Media![1]] };
+    pending.resolve({ status: 200, data: {} });
+  });
+  expect(dialog()?.textContent).toContain("File information");
+  expect(dialog()?.textContent).toContain("/Movies/Example/1080p.mp4");
+  expect(dialog()?.textContent).not.toContain("/Movies/Example/4k.mkv");
+  expect(transport.mock.calls.filter(([, method]) => method === "DELETE").map(([path]) => path))
+    .toEqual(["/library/metadata/12/media/100"]);
+});
+
+it("keeps a failed deletion open for an explicit retry", async () => {
+  deletionOwner();
+  transport.mockImplementation(async (path, method) => {
+    if (path === "/") return { status: 200, data: { MediaContainer: { machineIdentifier: "server", allowMediaDeletion: true } } };
+    if (method === "DELETE") return { status: 403, data: {} };
+    return { status: 200, data: { MediaContainer: { Metadata: [fileMovie] } } };
+  });
+  await render();
+  await act(async () => openMediaDeleteDialog(fileMovie));
+  await click("Delete");
+  expect(dialog()?.textContent).toContain("403");
+  expect(button("Retry")).toBeTruthy();
+  expect(transport.mock.calls.filter(([, method]) => method === "DELETE")).toHaveLength(1);
+});
+
+it("closes a deletion immediately when the owner profile changes", async () => {
+  deletionOwner();
+  const pending = deferred();
+  transport.mockImplementation(async (path, method) => {
+    if (path === "/") return { status: 200, data: { MediaContainer: { machineIdentifier: "server", allowMediaDeletion: true } } };
+    if (method === "DELETE") return pending.promise;
+    return { status: 200, data: { MediaContainer: { Metadata: [fileMovie] } } };
+  });
+  await render();
+  await act(async () => openMediaDeleteDialog(fileMovie));
+  await click("Delete");
+  await act(async () => useAuthSession.setState({ revision: 2 }));
+  expect(dialog()).toBeNull();
+  await act(async () => pending.resolve({ status: 200, data: {} }));
+  expect(useMediaActionDialog.getState().selection).toBeNull();
+});
+
+it("closes the deleted item's details while preserving unrelated library filters", async () => {
+  deletionOwner();
+  let removed = false;
+  transport.mockImplementation(async (path, method) => {
+    if (path === "/") return { status: 200, data: { MediaContainer: { machineIdentifier: "server", allowMediaDeletion: true } } };
+    if (method === "DELETE") { removed = true; return { status: 200, data: {} }; }
+    return removed ? { status: 404, data: {} } : { status: 200, data: { MediaContainer: { Metadata: [fileMovie] } } };
+  });
+  function Location() {
+    const location = useLocation();
+    return <output>{location.pathname}{location.search}</output>;
+  }
+  await act(async () => root.render(<MemoryRouter initialEntries={["/browse/1?view=browse&mid=12&detailsTab=media"]}>
+    <MediaActionDialogHost /><Location />
+  </MemoryRouter>));
+  await act(async () => openMediaDeleteDialog(fileMovie));
+  expect(dialog()?.textContent).toContain("4k.mkv");
+  expect(dialog()?.textContent).toContain("1080p.mp4");
+  await click("Delete");
+  expect(dialog()).toBeNull();
+  expect(container.querySelector("output")?.textContent).toBe("/browse/1?view=browse");
 });

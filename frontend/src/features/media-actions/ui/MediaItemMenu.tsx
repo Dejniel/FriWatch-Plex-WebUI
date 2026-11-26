@@ -23,6 +23,7 @@ import {
   useAuthSession,
   useServerSession,
   useCanManageServer,
+  useCanDeleteMedia,
 } from "features/session/model";
 import { useRef, useState, type ReactNode } from "react";
 import { overlayContainer } from "shared/lib/overlayContainer";
@@ -37,6 +38,7 @@ import { openMetadataDialog } from "../model/mediaActionDialog";
 import MediaRatingButton from "./MediaRatingButton";
 import { renderOriginalDownloadMenuItems } from "./OriginalDownloadMenuItems";
 import { renderMetadataMatchingMenuItems } from "./MetadataMatchingMenuItems";
+import { renderMediaFileMenuItems } from "./MediaFileMenuItems";
 
 interface Props {
   item: MediaItemData;
@@ -61,12 +63,14 @@ function ItemMenu({ item, onOpen, renderMenuItems }: Props) {
     (state) => state.server?.allowSync === true,
   );
   const canManageServer = useCanManageServer();
+  const allowMediaDeletion = useCanDeleteMedia();
   const metadata = useLazyMediaMetadata(item);
   const data = metadata.data;
   const capabilities = getMediaActionCapabilities(data ?? item, {
     localItem: true,
     canManageServer,
     allowDownloads,
+    allowMediaDeletion,
   });
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const rating = useRef<{ open: (anchor: HTMLElement) => void }>(null);
@@ -117,6 +121,7 @@ function ItemMenu({ item, onOpen, renderMenuItems }: Props) {
           </MenuItem>
         )}
         {renderMetadataMatchingMenuItems({ item: data ?? item, capabilities, onClose: close })}
+        {renderMediaFileMenuItems({ item, data, capabilities, onClose: close })}
         {capabilities.canEditMetadata && <Divider />}
         {renderMenuItems?.(close)}
         {renderMenuItems &&

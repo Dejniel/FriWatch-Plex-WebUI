@@ -12,7 +12,7 @@ export type {
 export { useAuthSession } from "./model/authSession";
 export type { HomeProfile } from "./model/authStorage";
 export { useServerSession } from "./model/serverSession";
-export { canManageServer, useCanManageServer } from "./model/serverAccess";
+export { canManageServer, useCanManageServer, canDeleteMedia, useCanDeleteMedia } from "./model/serverAccess";
 export {
   getActiveServerScope,
   useActiveServerScope,

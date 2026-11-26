@@ -38,6 +38,7 @@ FriWatch originated as a fork of [Ipmake/NevuForPlex](https://github.com/Ipmake/
 - **Subtitle search, download and file upload** with editable search criteria, language and Forced/SDH preferences, Plex provider results, and automatic selection during playback. Upload SRT, VTT, ASS, SSA or SMI files to the current media version; Plex stores them for future playback.
 - **Firefox-compatible trailer playback** with Plex Discover fallback when a local trailer is unavailable.
 - **Original-file downloads** for video, tracks and photos when the active Plex account is allowed, with a choice of available files and versions.
+- **File information** for video, tracks and photos, including versions, multipart files, full paths with copying, sizes and technical details. The server owner can delete one version or all source files when Plex allows media deletion, with confirmation listing the affected paths.
 - **Watch Together through FriWatch Sync**, which can be disabled for a simpler local installation.
 
 ### Administration and hosting

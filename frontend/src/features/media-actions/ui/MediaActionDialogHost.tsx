@@ -6,6 +6,7 @@ import {
   useActiveServerScope,
   useAuthSession,
   useCanManageServer,
+  useCanDeleteMedia,
 } from "features/session/model";
 import { serverQueryClient } from "shared/api/queryClient";
 import {
@@ -16,6 +17,8 @@ import {
 import EditMetadataDialog from "./EditMetadataDialog";
 import MatchMetadataDialog from "./MatchMetadataDialog";
 import ConfirmedMediaActionDialog from "./ConfirmedMediaActionDialog";
+import { MediaFilesDialog } from "./MediaFilesDialog";
+import { MediaDeletionDialog } from "./MediaDeletionDialog";
 
 /** Media workflows outlive virtualized cards and responsive grid regrouping. */
 export function MediaActionDialogHost() {
@@ -24,14 +27,16 @@ export function MediaActionDialogHost() {
   const revision = useAuthSession((state) => state.revision);
   const ready = useAuthSession((state) => state.status === "ready");
   const allowed = useCanManageServer();
+  const deleteAllowed = useCanDeleteMedia();
   const current = Boolean(
     selection &&
-      ready &&
-      (selection.kind === "watched" || allowed) &&
-      selection.scope.serverId === scope.serverId &&
-      selection.scope.profileKey === scope.profileKey &&
-      selection.revision === revision &&
-      selection.isCurrent(),
+    ready &&
+    (selection.kind === "watched" || selection.kind === "files" || allowed) &&
+    (selection.kind !== "delete" || deleteAllowed) &&
+    selection.scope.serverId === scope.serverId &&
+    selection.scope.profileKey === scope.profileKey &&
+    selection.revision === revision &&
+    selection.isCurrent(),
   );
   useEffect(() => {
     if (selection && !current) closeMediaActionDialog(selection);
@@ -47,6 +52,10 @@ function OpenedMediaActionDialog({
   selection: MediaActionSelection;
 }) {
   const onClose = () => closeMediaActionDialog(selection);
+  if (selection.kind === "files")
+    return <MediaFilesDialog selection={selection} onClose={onClose} />;
+  if (selection.kind === "delete")
+    return <MediaDeletionDialog selection={selection} onClose={onClose} />;
   if (selection.kind === "watched" || selection.kind === "unmatch")
     return (
       <ConfirmedMediaActionDialog selection={selection} onClose={onClose} />

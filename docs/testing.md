@@ -93,6 +93,13 @@ to the same gallery position. Queue/profile lifecycle and request contracts also
 have mocked tests; browser playback with synthetic audio does not verify PMS
 conversion or device codec support.
 
+For file deletion tests, mount a separate directory of disposable samples writable
+by Plex; the normal `/data` sample mount remains read-only. Check deleting one
+version while retaining another, all parts of a multipart version, and whole
+video/track/photo items. Verify disk contents, library updates and closing deleted
+details. Test denied permission, changed file inventories, lost responses and
+profile changes; retry after an acknowledged deletion must only check status.
+
 Ports are configurable through `PLEX_TEST_PORT` and `FRIWATCH_TEST_PORT`.
 For a remote host, forward the localhost ports through an SSH tunnel.
 Use `PLEX_TEST_IMAGE` to select a Plex version and record it with test results.

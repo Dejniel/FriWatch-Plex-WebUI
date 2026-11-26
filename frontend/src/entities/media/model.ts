@@ -37,6 +37,8 @@ export type {
   TrackPreference,
 } from "./model/mediaVersions";
 export type { MediaItemData } from "./model/media";
+export { mediaFileVersions, mediaFilename, mediaFileFacts, formatMediaFileSize, supportsMediaFiles } from "./model/mediaFiles";
+export type { MediaFileVersion } from "./model/mediaFiles";
 export type {
   MediaMetadata,
   MediaRendition,

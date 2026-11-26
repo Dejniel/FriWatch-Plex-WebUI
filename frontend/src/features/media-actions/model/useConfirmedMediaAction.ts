@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { serverQueryClient } from "shared/api/queryClient";
 import { createMetadataMatcher } from "../api/matching";
 import { createWatchedAction, WatchedActionError } from "../api/watched";
+import { createMediaDeletion, type MediaDeletionResult } from "../api/deletion";
 import {
   useMediaActionDialog,
   type ConfirmedMediaAction,
@@ -12,6 +13,7 @@ import {
 export function useConfirmedMediaAction(
   selection: ConfirmedMediaAction,
   onClose: () => void,
+  onDeleted?: (result: MediaDeletionResult) => void | Promise<void>,
 ) {
   const [ids, setIds] = useState(() =>
     selection.kind === "watched"
@@ -19,6 +21,10 @@ export function useConfirmedMediaAction(
       : [selection.data.ratingKey],
   );
   const [execute] = useState(() => {
+    if (selection.kind === "delete") {
+      const remove = createMediaDeletion(selection, selection.target);
+      return (_ids: string[], signal: AbortSignal) => remove(signal);
+    }
     if (selection.kind === "unmatch") {
       const source = createMetadataMatcher(selection.data);
       return (_ids: string[], signal: AbortSignal) => source.unmatch(signal);
@@ -29,7 +35,11 @@ export function useConfirmedMediaAction(
   });
   const request = useRef<AbortController | null>(null);
   useEffect(() => () => request.current?.abort(), []);
-  const mutation = useMutation(
+  const mutation = useMutation<
+    void | MediaDeletionResult,
+    Error,
+    { ids: string[]; signal: AbortSignal }
+  >(
     {
       mutationKey: [
         "media-action",
@@ -42,6 +52,8 @@ export function useConfirmedMediaAction(
         selection.assertCurrent(signal);
         return execute(ids, signal);
       },
+      retry: false,
+      gcTime: 0,
     },
     serverQueryClient,
   );
@@ -61,8 +73,16 @@ export function useConfirmedMediaAction(
       const controller = new AbortController();
       request.current = controller;
       try {
-        await mutation.mutateAsync({ ids, signal: controller.signal });
+        const result = await mutation.mutateAsync({
+          ids,
+          signal: controller.signal,
+        });
         if (current(controller)) {
+          if (selection.kind === "delete" && result) {
+            if (onDeleted) await onDeleted(result);
+            else onClose();
+            return;
+          }
           try {
             progress([]);
           } finally {

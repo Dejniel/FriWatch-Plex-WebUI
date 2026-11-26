@@ -2,6 +2,8 @@ export { default as ActionableMediaCard } from "./ui/ActionableMediaCard";
 export { MediaShelf } from "./ui/MediaShelf";
 export type { MediaShelfProps } from "./ui/MediaShelf";
 export { MediaActionDialogHost } from "./ui/MediaActionDialogHost";
+export { MediaFilesPanel } from "./ui/MediaFilesPanel";
+export { renderMediaFileMenuItems } from "./ui/MediaFileMenuItems";
 export {
   openMetadataDialog,
   openMetadataMatchDialog,

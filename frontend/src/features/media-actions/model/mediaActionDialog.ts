@@ -1,8 +1,14 @@
 import { isVideoLibraryItemType } from "@friwatch/contracts";
 import { create } from "zustand";
-import type { MediaScope, MediaItemData } from "entities/media/model";
+import {
+  supportsMediaFiles,
+  type MediaMetadata,
+  type MediaScope,
+  type MediaItemData,
+} from "entities/media/model";
 import {
   canManageServer,
+  canDeleteMedia,
   capturePlexSession,
   type CapturedPlexSession,
   useAuthSession,
@@ -10,9 +16,17 @@ import {
 } from "features/session/model";
 import { metadataMatchType } from "./matching";
 import type { MetadataEditingItem } from "./metadataEditing";
+import { mediaDeletionTarget, type MediaDeletionTarget } from "./mediaDeletion";
 
 export type WatchedTarget = Pick<MediaItemData, "ratingKey" | "type" | "title">;
 type DialogIntent =
+  | { kind: "files"; data: MediaItemData }
+  | {
+      kind: "delete";
+      data: MediaMetadata;
+      target: MediaDeletionTarget;
+      returnToFiles: boolean;
+    }
   | { kind: "edit"; data: MetadataEditingItem; onSaved?: () => void }
   | { kind: "match"; data: MediaItemData; onSaved?: () => void }
   | { kind: "unmatch"; data: WatchedTarget }
@@ -29,7 +43,7 @@ export type MediaActionSelection = DialogIntent &
   };
 export type ConfirmedMediaAction = Extract<
   MediaActionSelection,
-  { kind: "watched" | "unmatch" }
+  { kind: "watched" | "unmatch" | "delete" }
 >;
 export const useMediaActionDialog = create<{
   selection: MediaActionSelection | null;
@@ -42,12 +56,14 @@ function openDialog(intent: DialogIntent): MediaActionSelection | null {
   if (!session.scope || !session.isCurrent()) return null;
   if (
     intent.kind !== "watched" &&
+    intent.kind !== "files" &&
     !canManageServer(
       Boolean(activeUser && !activeUser.restricted),
       useServerSession.getState().canManageServer,
     )
   )
     return null;
+  if (intent.kind === "delete" && !canDeleteMedia()) return null;
   const selection = {
     ...intent,
     ...session,
@@ -62,6 +78,18 @@ function openDialog(intent: DialogIntent): MediaActionSelection | null {
 export function closeMediaActionDialog(selection: MediaActionSelection | null) {
   if (selection && useMediaActionDialog.getState().selection === selection)
     useMediaActionDialog.setState({ selection: null });
+}
+export function openMediaFilesDialog(data: MediaItemData) {
+  if (supportsMediaFiles(data)) return openDialog({ kind: "files", data });
+  return null;
+}
+export function openMediaDeleteDialog(
+  data: MediaMetadata,
+  mediaId?: number,
+  returnToFiles = false,
+) {
+  const target = mediaDeletionTarget(data, mediaId);
+  return openDialog({ kind: "delete", data, target, returnToFiles });
 }
 export function openMetadataDialog(
   data: MetadataEditingItem,

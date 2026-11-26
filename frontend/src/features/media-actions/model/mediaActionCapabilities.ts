@@ -1,4 +1,4 @@
-import type { MediaItemData } from "entities/media/model";
+import { supportsMediaFiles, type MediaItemData } from "entities/media/model";
 import { isVideoLibraryItemType } from "@friwatch/contracts";
 import { isMatchedMetadata, metadataMatchType } from "./matching";
 import { supportsMetadataEditing } from "./metadataEditing";
@@ -11,6 +11,7 @@ export interface MediaActionContext {
   localItem: boolean;
   canManageServer: boolean;
   allowDownloads: boolean;
+  allowMediaDeletion?: boolean;
 }
 
 export interface MediaActionCapabilities extends MediaListCapabilities {
@@ -18,6 +19,8 @@ export interface MediaActionCapabilities extends MediaListCapabilities {
   canMatch: boolean;
   canUnmatch: boolean;
   canDownload: boolean;
+  canViewFiles: boolean;
+  canDeleteFiles: boolean;
   canRate: boolean;
   canSetWatched: boolean;
   similarRatingKey: string | null;
@@ -25,17 +28,20 @@ export interface MediaActionCapabilities extends MediaListCapabilities {
 
 export function getMediaActionCapabilities(
   item: MediaItemData,
-  { localItem, canManageServer, allowDownloads }: MediaActionContext,
+  { localItem, canManageServer, allowDownloads, allowMediaDeletion = false }: MediaActionContext,
 ): MediaActionCapabilities {
   const video = isVideoLibraryItemType(item.type);
   const canEditMetadata = localItem && /^\d+$/.test(item.ratingKey) && canManageServer && supportsMetadataEditing(item.type);
   const canMatch = canEditMetadata && metadataMatchType(item.type) !== undefined;
+  const canViewFiles = localItem && supportsMediaFiles(item);
   const similarRatingKey =
     item.type === "episode" ? item.grandparentRatingKey : item.ratingKey;
 
   return {
     ...getMediaListCapabilities(item, { localItem, canManageServer }),
     canEditMetadata,
+    canViewFiles,
+    canDeleteFiles: canViewFiles && canManageServer && allowMediaDeletion,
     canMatch,
     canUnmatch: canMatch && isMatchedMetadata(item),
     canDownload:

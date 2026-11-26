@@ -156,6 +156,14 @@ Episode browsing owns season selection/Query reads and scoped selected IDs.
 Cards, details and episodes delegate confirmed watched actions to
 `features/media-actions`: one application-level dialog/controller owns pending,
 errors, cancellation and retries. Unmatch uses the same confirmation controller.
+File information and deletion use that host as well. `entities/media` owns the
+read-only inventory of versions and all their parts; `media-actions` supplies
+downloads and owner-only deletion. A confirmation snapshots file identities and
+paths, then rechecks them and Plex's deletion permission before writing. Accepted
+deletions are verified before closing; retrying a failed verification only reads
+status. Verified version changes publish observed field differences, including
+for filters over files. Submitted writes reconcile their captured scope even
+after cancellation.
 Writes capture their server/profile/token before confirmation; batches bound
 concurrency and retain only failed IDs. Season/session changes cancel obsolete
 work. Submitted writes publish reconciliation hints, including uncertain failures;

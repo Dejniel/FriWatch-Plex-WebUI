@@ -2,7 +2,7 @@ import { MoreVertRounded, PlayArrowRounded } from "@mui/icons-material";
 import { isVideoLibraryItemType } from "@friwatch/contracts";
 import { CircularProgress, IconButton, Tooltip } from "@mui/material";
 import { MediaCard, type MediaCardProps } from "entities/media/public";
-import { useCanManageServer, useServerSession } from "features/session/public";
+import { useCanManageServer, useServerSession, useCanDeleteMedia } from "features/session/model";
 import { WatchlistButton } from "features/watchlist/public";
 import {
   openMediaListDialog,
@@ -63,6 +63,7 @@ function VideoMediaCard({
   const location = useLocation();
   const navigate = useNavigate();
   const canManageServer = useCanManageServer();
+  const allowMediaDeletion = useCanDeleteMedia();
   const allowDownloads = useServerSession(
     (state) => state.server?.allowSync === true,
   );
@@ -78,6 +79,7 @@ function VideoMediaCard({
     localItem: !PlexTvSource,
     canManageServer,
     allowDownloads,
+    allowMediaDeletion,
   });
 
   const menuOpen = anchor !== null;
@@ -204,6 +206,7 @@ function VideoMediaCard({
 
       {anchor && (
         <MediaActionsMenu
+          metadata={fullMetadata}
           anchor={anchor}
           capabilities={capabilities}
           detailsTarget={detailsTarget}

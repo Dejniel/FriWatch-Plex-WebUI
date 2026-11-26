@@ -34,8 +34,9 @@ import { withoutExtra } from "entities/media/model";
 import {
   useAuthSession,
   useCanManageServer,
+  useCanDeleteMedia,
   useServerSession,
-} from "features/session/public";
+} from "features/session/model";
 import { useTitleExtras } from "../model/useTitleExtras";
 import ExpandableDescription from "./ExpandableDescription";
 import { libraryBrowseTo } from "shared/lib/navigation";
@@ -55,6 +56,7 @@ function TitleDetailsScreen() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const canManageServer = useCanManageServer();
+  const allowMediaDeletion = useCanDeleteMedia();
   const allowDownloads = useServerSession(
     (state) => state.server?.allowSync === true,
   );
@@ -97,6 +99,7 @@ function TitleDetailsScreen() {
         localItem: true,
         canManageServer,
         allowDownloads,
+        allowMediaDeletion,
       })
     : null;
   const {
