@@ -12,7 +12,7 @@ import { MusicProvider } from "features/music/public";
 import { useCatalogScrollRestoration } from "./useCatalogScrollRestoration";
 import Startup, { useStartupState } from "./startup/Startup";
 import AppRoutes from "./AppRoutes";
-import { useBrowseSynchronization } from "./useBrowseSynchronization";
+import { usePlexSynchronization } from "./usePlexSynchronization";
 
 function AppManager() {
   const loading = useStartupState((state) => state.loading);
@@ -36,7 +36,7 @@ function AppManager() {
 function App() {
   useCatalogScrollRestoration();
   const sessionRevision = useAuthSession((state) => state.revision);
-  useBrowseSynchronization(sessionRevision);
+  usePlexSynchronization(sessionRevision);
 
   useEffect(() => {
     void useServerSession.getState().refresh();

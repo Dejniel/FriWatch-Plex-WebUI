@@ -74,6 +74,15 @@ With slow authentication and profile settings, verify that the startup spinner
 keeps animating without restarting between stages. Check profile changes during
 loading, cached settings after failure, and Retry.
 
+For server activity, start a scan or maintenance task in standalone Plex. Check
+live progress, one continuous icon animation, reduced motion, and separate task
+and playback counts. The top-bar preview must contain only current activity;
+completion, notices and errors belong to the full page's session history. Check
+playback/conversion details, missed events after reconnect/focus, and failed reads
+without losing cached entries. Confirm cancellation only for cancellable tasks;
+check changed permissions, rejected writes, profile switches during a request,
+and a failed refresh after acknowledgement without repeating the write.
+
 For music/photo libraries, check artist → album → tracks, disc order, playback
 during navigation, queue add/remove/reorder and repeated songs. Include native
 audio and a format requiring Plex conversion. Verify HLS and DASH audio decisions,

@@ -19,8 +19,9 @@ export {
 } from "./model/activeServerScope";
 export { PLEX_SESSION_INVALID_EVENT } from "./model/sessionEvents";
 export { connectPlexServerEvents } from "./api/serverEvents";
+export type { PlexServerEvent } from "./api/serverEvents";
 export type { PlexServerChange } from "./model/serverChanges";
-export { mediaChangeFromServer } from "./model/serverChanges";
+export { mediaChangeFromServer, parsePlexServerChanges } from "./model/serverChanges";
 export {
   getXPlexProps,
   plexClient,

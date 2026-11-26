@@ -44,6 +44,7 @@ import { SPONSOR_URL } from "shared/config/projectLinks";
 import { LibraryNavigation } from "features/library-navigation/public";
 import { SearchBar } from "features/search/public";
 import { PAGE_GUTTER } from "shared/ui/layout";
+import { ServerActivityButton } from "features/server-activity/public";
 
 const barSideSx: SxProps<Theme> = {
   display: "flex",
@@ -339,6 +340,8 @@ S - Skip onscreen markers (intro, credits, etc)
             </Tooltip>
           </>
         )}
+
+        <ServerActivityButton />
 
         {room && (
           <IconButton

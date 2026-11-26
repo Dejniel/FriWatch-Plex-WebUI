@@ -22,7 +22,7 @@ afterEach(() => {
   globalThis.EventSource = original;
 });
 
-it("uses the existing proxy and parses named events without exposing partial media objects", () => {
+it("shares library, activity and playback events through the existing proxy", () => {
   const change = vi.fn();
   const close = connectPlexServerEvents("test-token", change);
   const current = streams[0];
@@ -30,16 +30,35 @@ it("uses the existing proxy and parses named events without exposing partial med
   expect(url.origin).toBe("https://friwatch.test");
   expect(url.pathname).toBe("/dynproxy/:/eventsource/notifications");
   expect(url.searchParams.get("X-Plex-Token")).toBe("test-token");
+  expect(url.searchParams.get("filters")?.split(",")).toEqual(
+    expect.arrayContaining([
+      "timeline",
+      "activity",
+      "playing",
+      "status",
+      "transcodeSession.update",
+    ]),
+  );
   current.dispatchEvent(
     new MessageEvent("timeline", {
       data: JSON.stringify({ TimelineEntry: { type: 1, sectionID: "2" } }),
     }),
   );
-  expect(change).toHaveBeenCalledWith({ kind: "library", sectionId: "2", type: 1 });
+  expect(change).toHaveBeenCalledWith({
+    type: "notification",
+    name: "timeline",
+    data: JSON.stringify({ TimelineEntry: { type: 1, sectionID: "2" } }),
+  });
+  current.dispatchEvent(new MessageEvent("activity", { data: "task-data" }));
+  expect(change).toHaveBeenLastCalledWith({
+    type: "notification",
+    name: "activity",
+    data: "task-data",
+  });
   close();
   current.dispatchEvent(new MessageEvent("timeline", { data: "{}" }));
   expect(current.close).toHaveBeenCalledTimes(1);
-  expect(change).toHaveBeenCalledTimes(1);
+  expect(change).toHaveBeenCalledTimes(2);
 });
 
 it("invalidates on reconnection and removes every callback when a profile is closed", () => {
@@ -47,11 +66,34 @@ it("invalidates on reconnection and removes every callback when a profile is clo
   const close = connectPlexServerEvents("test-token", change);
   const current = streams[0];
   current.onopen?.();
-  expect(change).not.toHaveBeenCalled();
+  expect(change).toHaveBeenLastCalledWith({
+    type: "connection",
+    state: "connected",
+    reconnected: false,
+  });
   current.onerror?.();
+  expect(change).toHaveBeenLastCalledWith({
+    type: "connection",
+    state: "disconnected",
+  });
   current.onopen?.();
-  expect(change).toHaveBeenCalledWith({ kind: "server", reason: "reconnect" });
+  expect(change).toHaveBeenLastCalledWith({
+    type: "connection",
+    state: "connected",
+    reconnected: true,
+  });
   close();
   expect(current.onopen).toBeNull();
   expect(current.onerror).toBeNull();
+});
+
+it("reports unsupported streaming so consumers can use recovery reads", () => {
+  globalThis.EventSource = undefined as unknown as typeof EventSource;
+  const receive = vi.fn();
+  const close = connectPlexServerEvents("token", receive);
+  expect(receive).toHaveBeenCalledWith({
+    type: "connection",
+    state: "unavailable",
+  });
+  close();
 });

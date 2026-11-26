@@ -1,36 +1,56 @@
 import { getBackendURL } from "shared/api/backend";
-import {
-  parsePlexServerChanges,
-  type PlexServerChange,
-} from "../model/serverChanges";
+
+const eventNames = [
+  "timeline",
+  "preference",
+  "provider.change",
+  "activity",
+  "playing",
+  "transcodeSession.update",
+  "backgroundProcessingQueue",
+  "status",
+] as const;
+export type PlexServerEvent =
+  | { type: "notification"; name: (typeof eventNames)[number]; data: string }
+  | {
+      type: "connection";
+      state: "connected" | "disconnected" | "unavailable";
+      reconnected?: boolean;
+    };
 
 /** Plex SSE works through the existing HTTP proxy, including remote deployments. */
 export function connectPlexServerEvents(
   token: string,
-  onChange: (change: PlexServerChange) => void,
+  onEvent: (event: PlexServerEvent) => void,
 ) {
-  if (typeof EventSource === "undefined") return () => undefined;
+  if (typeof EventSource === "undefined") {
+    onEvent({ type: "connection", state: "unavailable" });
+    return () => undefined;
+  }
   const params = new URLSearchParams({
     "X-Plex-Token": token,
-    filters: "timeline,preference,provider.change",
+    filters: eventNames.join(","),
   });
   const stream = new EventSource(
     `${getBackendURL()}/dynproxy/:/eventsource/notifications?${params}`,
   );
-  const handlers = ["timeline", "preference", "provider.change"].map((name) => {
+  const handlers = eventNames.map((name) => {
     const handler = (event: MessageEvent<string>) =>
-      parsePlexServerChanges(name, event.data).forEach((change) =>
-        onChange(change),
-      );
+      onEvent({ type: "notification", name, data: event.data });
     stream.addEventListener(name, handler as EventListener);
     return { name, handler };
   });
   let interrupted = false;
   stream.onerror = () => {
     interrupted = true;
+    onEvent({ type: "connection", state: "disconnected" });
   };
   stream.onopen = () => {
-    if (interrupted) onChange({ kind: "server", reason: "reconnect" });
+    onEvent({
+      type: "connection",
+      state: "connected",
+      reconnected: interrupted,
+    });
     interrupted = false;
   };
   return () => {

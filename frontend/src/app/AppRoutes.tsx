@@ -13,6 +13,7 @@ import { SearchScreen } from "features/search/public";
 import { SettingsScreen } from "features/settings/public";
 import { PlaybackScreen } from "features/playback/public";
 import { WaitingRoomScreen } from "features/watch-together/public";
+import { ServerActivityScreen } from "features/server-activity/routes";
 
 export default function AppRoutes() {
   return (
@@ -39,6 +40,7 @@ export default function AppRoutes() {
           <Route path="/search/:query?" element={<SearchScreen />} />
           <Route path="/sync/waitingroom" element={<WaitingRoomScreen />} />
           <Route path="/settings/*" element={<SettingsScreen />} />
+          <Route path="/activity" element={<ServerActivityScreen />} />
         </Routes>
       </Box>
       <MusicPlayer />

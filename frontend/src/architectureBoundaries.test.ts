@@ -15,6 +15,7 @@ const HEADLESS_FEATURE_ENTRYPOINTS = new Set([
   "media-actions",
   "music",
   "photos",
+  "server-activity",
 ]);
 const SOURCE_EXTENSION = /\.(ts|tsx)$/;
 

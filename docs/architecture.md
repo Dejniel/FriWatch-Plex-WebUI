@@ -246,6 +246,18 @@ scoped synchronization after Match/Unmatch. Video and music reuse the same actio
 Source paths reuse canonical metadata and the shared file-path presenter; their
 loading or failure does not block matching.
 
+`usePlexSynchronization` owns one session-scoped SSE connection. Library hints
+and `features/server-activity` consume it independently. Query owns current tasks,
+background conversions and playbacks; full activity events update only their task
+query. Notifications received during a snapshot are replayed before publication,
+so an older HTTP response cannot restore ended tasks. Playback hints coalesce
+resource-specific reads; reconnect/focus and visible polling recover missed events.
+Only connection state and the last 100 observed history entries live outside Query.
+History is scoped to the current session, shown only on the activity page, and
+cleared on reload/profile change. Cancellation rechecks the captured session and
+Plex's current cancellability; an accepted cancellation and a later read failure
+remain separate outcomes.
+
 Plex Home membership and permissions come from Plex's Home API, using the active
 profile's account token. Settings observes one native Query resource and revalidates
 it after writes; safe profile fields update the session and profile picker. PINs
